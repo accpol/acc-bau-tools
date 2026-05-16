@@ -678,7 +678,7 @@ export default function App() {
     const code = encodeTicket(ticket);
     setTransferCode(code);
     setShowTransfer(true);
-    setPhotoContext({ historyId: historyItem.id, mode: "giver", tool: selected, title: "Przekazałeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+    setPhotoContext({ historyId: historyItem.id, historyItem, mode: "giver", tool: selected, title: "Przekazałeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
     setShowPhotoModal(true);
   }
 
@@ -697,7 +697,7 @@ export default function App() {
       setHistory(nextHistory);
       const updatedHistory = nextHistory.find((h) => h.id === ticket.historyId);
       if (supabase && updatedHistory) await supabase.from("history").upsert({ id: updatedHistory.id, data: updatedHistory });
-      setPhotoContext({ historyId: ticket.historyId, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+      setPhotoContext({ historyId: ticket.historyId, historyItem: updatedHistory, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
       setShowPhotoModal(true);
     }
 
@@ -1194,6 +1194,7 @@ function PhotoGallery({ title, photos }) {
 
 function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
   const [photos, setPhotos] = useState([]);
+  const [saving, setSaving] = useState(false);
   const field = context.mode === "giver" ? "photosFromGiver" : "photosFromReceiver";
 
   function addPhotos(files) {
@@ -1205,17 +1206,37 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
   }
 
   async function save() {
-    const nextHistory = history.map((h) => {
-      if (h.id !== context.historyId) return h;
-      return { ...h, [field]: [...(h[field] || []), ...photos] };
+    setSaving(true);
+
+    const currentItem = history.find((h) => h.id === context.historyId) || context.historyItem;
+
+    if (!currentItem) {
+      alert("Nie znaleziono wpisu historii. Zamknij okno i spróbuj ponownie.");
+      setSaving(false);
+      return;
+    }
+
+    const updatedItem = {
+      ...currentItem,
+      [field]: [...(currentItem[field] || []), ...photos],
+    };
+
+    setHistory((prev) => {
+      const exists = prev.some((h) => h.id === updatedItem.id);
+      if (!exists) return [updatedItem, ...prev];
+      return prev.map((h) => (h.id === updatedItem.id ? updatedItem : h));
     });
-    setHistory(nextHistory);
-    const item = nextHistory.find((h) => h.id === context.historyId);
-    if (supabase && item) await supabase.from("history").upsert({ id: item.id, data: item });
+
+    if (supabase) {
+      const { error } = await supabase.from("history").upsert({ id: updatedItem.id, data: updatedItem });
+      if (error) alert("Nie udało się zapisać zdjęć w Supabase: " + error.message);
+    }
+
+    setSaving(false);
     onClose();
   }
 
-  return <Modal><ModalHeader title={context.title} subtitle={context.tool?.name} onClose={onClose} /><div className="p-6"><input type="file" accept="image/*" multiple capture="environment" onChange={(e) => addPhotos(e.target.files)} className="w-full rounded-2xl border p-3" /><div className="mt-4 grid gap-3 sm:grid-cols-3">{photos.map((p, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-white p-2"><img src={p} className="h-32 w-full rounded-xl object-cover" /></div>)}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Pomiń</Button><Button onClick={save} className="bg-zinc-950 hover:bg-zinc-800">Zapisz zdjęcia</Button></div></div></Modal>;
+  return <Modal><ModalHeader title={context.title} subtitle={context.tool?.name} onClose={onClose} /><div className="p-6"><input type="file" accept="image/*" multiple capture="environment" onChange={(e) => addPhotos(e.target.files)} className="w-full rounded-2xl border p-3" /><div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Zdjęcia zapiszą się w historii tego konkretnego przekazania. Potem kliknij wpis w historii, aby je zobaczyć.</div><div className="mt-4 grid gap-3 sm:grid-cols-3">{photos.map((p, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-white p-2"><img src={p} className="h-32 w-full rounded-xl object-cover" /></div>)}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Pomiń</Button><Button disabled={saving} onClick={save} className="bg-zinc-950 hover:bg-zinc-800">{saving ? "Zapisywanie..." : "Zapisz zdjęcia"}</Button></div></div></Modal>;
 }
 
 function ClaimModal({ T, initialCode, onClose, onClaim }) {
