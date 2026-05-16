@@ -85,8 +85,8 @@ const I18N = {
     noHistory: "Brak historii.",
     noInspections: "Brak przeglądów.",
     inspectionNeedsAction: "Przegląd wymaga reakcji",
-    publicInfo: "Informacja BHP",
-    publicTitle: "ACC BAU • INFORMACJA BHP",
+    publicInfo: "HSE Information",
+    publicTitle: "ACC BAU • HSE INFORMATION",
     publicSubtitle: "Dane po zeskanowaniu QR — bez logowania.",
     equipmentId: "ID sprzętu",
     safetyInspectionStatus: "Status przeglądu BHP",
@@ -257,8 +257,8 @@ const I18N = {
     noHistory: "Keine Historie.",
     noInspections: "Keine Prüfungen.",
     inspectionNeedsAction: "Prüfung erfordert Reaktion",
-    publicInfo: "Sicherheitsinformation",
-    publicTitle: "ACC BAU • SICHERHEITSINFORMATION",
+    publicInfo: "HSE Information",
+    publicTitle: "ACC BAU • HSE INFORMATION",
     publicSubtitle: "Daten nach QR-Scan — ohne Login.",
     equipmentId: "Geräte-ID",
     safetyInspectionStatus: "Status der Sicherheitsprüfung",
@@ -334,6 +334,7 @@ const defaultTools = [
     location: "Kontener A",
     assignedTo: "Klepacki",
     notes: "Walizka kompletna",
+    photo: "",
     inspections: [
       { id: "i1", type: "DGUV/VDE", doneDate: "2026-05-30", nextDate: "2026-11-30", result: "OK", notes: "Pomiar OK" },
       { id: "i2", type: "Serwis mechaniczny", doneDate: "2026-03-20", nextDate: "2026-09-20", result: "OK", notes: "Szczotki OK" },
@@ -351,6 +352,7 @@ const defaultTools = [
     location: "Regal 2",
     assignedTo: "",
     notes: "Sprawdzić przewód",
+    photo: "",
     inspections: [{ id: "i3", type: "DGUV/VDE", doneDate: "2026-02-15", nextDate: "2026-08-15", result: "OK", notes: "" }],
   },
 ];
@@ -367,11 +369,12 @@ const emptyTool = {
   location: "",
   assignedTo: "",
   notes: "",
+  photo: "",
   inspections: [],
 };
 
 const statusOptions = ["Wszystkie", "Dostępne", "Wydane", "Do przeglądu", "Uszkodzone", "Zgubione"];
-const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Inny"];
+const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Ubezpieczenie", "Inny"]; 
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -857,9 +860,9 @@ function LanguageSelect({ lang, setLang, dark = false }) {
         dark ? "border-white/20 bg-white/10 text-white" : "border-zinc-200 bg-white text-zinc-950"
       }`}
     >
-      <option className="text-zinc-950" value="pl">🇵🇱 PL</option>
-      <option className="text-zinc-950" value="en">🇬🇧 EN</option>
-      <option className="text-zinc-950" value="de">🇩🇪 DE</option>
+      <option className="text-zinc-950" value="pl">🇵🇱 Polski</option>
+      <option className="text-zinc-950" value="en">🇬🇧 English</option>
+      <option className="text-zinc-950" value="de">🇩🇪 Deutsch</option>
     </select>
   );
 }
@@ -934,21 +937,179 @@ function LoginScreen({ settings, T, lang, setLang, onLogin }) {
 }
 
 function PublicToolView({ tool, T, lang, setLang, onBack }) {
-  if (!tool) return <div className="min-h-screen bg-zinc-950 p-6 text-white"><Card className="mx-auto max-w-3xl rounded-3xl"><CardContent className="p-6"><h1 className="text-2xl font-black">ACC Bau • {T.publicInfo}</h1><p className="mt-3 text-red-600">{T.noToolFound}</p><Button onClick={onBack} className="mt-5">{T.back}</Button></CardContent></Card></div>;
+  if (!tool) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
+        <div className="rounded-3xl bg-white p-10 text-center shadow-2xl">
+          <div className="mb-4 text-2xl font-black">{T.noToolFound}</div>
+          <Button onClick={onBack}>{T.back}</Button>
+        </div>
+      </div>
+    );
+  }
+
   const state = inspectionStatus(tool, T);
-  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.2),transparent_35%),linear-gradient(135deg,#09090b,#18181b)] p-4 text-white"><div className="mx-auto max-w-4xl overflow-hidden rounded-[32px] bg-white text-zinc-950 shadow-2xl"><div className="bg-zinc-950 p-6 text-white"><div className="flex items-center justify-between gap-3"><div className="inline-flex rounded-full border border-orange-400/30 bg-orange-500/10 px-3 py-1 text-xs font-black uppercase text-orange-300">{T.publicTitle}</div><LanguageSelect lang={lang} setLang={setLang} dark /></div><h1 className="mt-4 text-4xl font-black">{tool.name}</h1><p className="mt-2 text-zinc-300">{T.publicSubtitle}</p></div><div className="grid gap-4 p-5 sm:grid-cols-2"><Info label={T.equipmentId} value={tool.id} /><Info label={T.serial} value={tool.serial || "—"} /><Info label={T.brandModel} value={`${tool.brand || "—"} ${tool.model || ""}`} /><Info label={T.category} value={tool.category || "—"} /><Info label={T.status} value={tool.status || "—"} /><Info label={T.location} value={`${tool.project || "—"} / ${tool.location || "—"}`} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><div className={`rounded-2xl border px-4 py-3 ${state.cls}`}><p className="text-xs font-semibold">{T.safetyInspectionStatus}</p><p className="text-lg font-black">{state.label}</p></div></div><div className="px-5 pb-6"><h2 className="mb-3 text-lg font-black">{T.testsInspections}</h2><div className="grid gap-3 sm:grid-cols-2">{inspections(tool).length ? inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />) : <div className="rounded-2xl border bg-red-50 p-4 text-red-700">{T.noInspections}</div>}</div><div className="mt-5 rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-600"><b>{T.notes}:</b><br />{tool.notes || "—"}</div></div></div></div>;
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.20),transparent_35%),linear-gradient(135deg,#2f302d,#575951)] p-4 text-zinc-950">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Button onClick={onBack} className="rounded-xl bg-zinc-950 text-white hover:bg-zinc-800">{T.back}</Button>
+          <LanguageSelect lang={lang} setLang={setLang} />
+        </div>
+
+        <Card className="overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-2xl">
+          <div className="bg-zinc-950 p-6 text-white">
+            <div className="inline-flex rounded-full border border-orange-400/30 bg-orange-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-orange-300">
+              {T.publicTitle}
+            </div>
+            <h1 className="mt-4 text-4xl font-black tracking-tight">{tool.name}</h1>
+            <p className="mt-2 text-zinc-300">{T.publicSubtitle}</p>
+          </div>
+
+          <CardContent className="p-5 sm:p-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+              <div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <InfoRow label={T.equipmentId} value={tool.id} />
+                  <InfoRow label={T.serial} value={tool.serial || "—"} />
+                  <InfoRow label={T.brandModel} value={`${tool.brand || "—"} ${tool.model || ""}`} />
+                  <InfoRow label={T.category} value={tool.category || "—"} />
+                  <InfoRow label={T.status} value={tool.status || "—"} />
+                  <InfoRow label={T.location} value={`${tool.project || "—"} / ${tool.location || "—"}`} />
+                  <InfoRow label={T.assignedTo} value={tool.assignedTo || T.warehouse} />
+                  <div className={`rounded-2xl border px-4 py-3 ${state.cls}`}>
+                    <p className="text-xs font-bold opacity-80">{T.safetyInspectionStatus}</p>
+                    <p className="text-lg font-black">{state.label}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-600">
+                  <b>{T.notes}:</b><br />{tool.notes || "—"}
+                </div>
+
+                <div className="mt-6">
+                  <h2 className="mb-3 text-lg font-black">{T.testsInspections}</h2>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {inspections(tool).length ? inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />) : <div className="rounded-2xl border bg-red-50 p-4 text-red-700">{T.noInspections}</div>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-4">
+                <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-xl">
+                  <img src={qrUrl(window.location.href)} alt="QR" className="h-[220px] w-[220px]" />
+                </div>
+
+                {tool.photo && (
+                  <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white p-2 shadow-xl">
+                    <img src={tool.photo} alt={tool.name} className="h-[150px] w-[220px] rounded-2xl object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-xs font-black uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="mt-1 text-sm font-bold text-zinc-900">{value}</div>
+    </div>
+  );
 }
 
 function ToolRow({ tool, active, onClick, T }) {
   const state = inspectionStatus(tool, T);
   const u = urgentInspection(tool);
-  return <motion.div whileHover={{ y: -2 }} onClick={onClick} className={`cursor-pointer rounded-[26px] border bg-white p-4 shadow-sm transition hover:shadow-xl ${active ? "border-zinc-950 ring-2 ring-zinc-950/10" : state.danger ? "border-red-300" : "border-zinc-200"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black">{tool.name}</h3><Badge cls={badgeStatus(tool.status)}>{tool.status}</Badge><Badge cls={state.cls}>{state.label}</Badge></div><p className="mt-1 text-sm text-zinc-500">{tool.id} • {tool.brand} {tool.model} • SN: {tool.serial}</p><div className="mt-2 text-xs text-zinc-600">{tool.project} • {tool.location} • {tool.assignedTo || T.unassigned} • {T.next}: {u?.nextDate || T.missing}</div></div><img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border bg-white p-1 shadow-sm" /></div></motion.div>;
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      onClick={onClick}
+      className={`cursor-pointer rounded-[26px] border bg-white p-4 shadow-sm transition hover:shadow-xl ${active ? "border-zinc-950 ring-2 ring-zinc-950/10" : state.danger ? "border-red-300" : "border-zinc-200"}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="group relative inline-block">
+              <h3 className="font-black underline-offset-4 group-hover:underline">{tool.name}</h3>
+              {tool.photo && (
+                <div className="pointer-events-none fixed left-[220px] top-[160px] z-[9999] hidden w-72 overflow-hidden rounded-3xl border-2 border-zinc-300 bg-white p-3 opacity-100 shadow-[0_30px_90px_rgba(0,0,0,0.55)] ring-4 ring-white group-hover:block">
+                  <div className="absolute inset-0 -z-10 bg-white" />
+                  <img src={tool.photo} alt={tool.name} className="h-48 w-full rounded-2xl bg-white object-cover" />
+                  <div className="bg-white px-2 py-2 text-xs font-bold text-zinc-700">
+                    {tool.name}<br />
+                    <span className="font-normal text-zinc-500">SN: {tool.serial || "—"}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <Badge cls={badgeStatus(tool.status)}>{tool.status}</Badge>
+            <Badge cls={state.cls}>{state.label}</Badge>
+          </div>
+          <p className="mt-1 text-sm text-zinc-500">{tool.id} • {tool.brand} {tool.model} • SN: {tool.serial}</p>
+          <div className="mt-2 text-xs text-zinc-600">{tool.project} • {tool.location} • {tool.assignedTo || T.unassigned} • {T.next}: {u?.nextDate || T.missing}</div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border bg-white p-1 shadow-sm" />
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint, onPrintHistory }) {
   const state = inspectionStatus(tool, T);
-  return <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]"><CardContent className="p-4 sm:p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">{tool.name}</h2><p className="text-sm text-zinc-500">{tool.id}</p>{state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> {T.inspectionNeedsAction}</div>}</div><img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" /></div><div className="mt-5 grid gap-3 text-sm"><Info label={T.category} value={tool.category} /><Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} /><Info label={T.serial} value={tool.serial} /><Info label={T.project} value={tool.project} /><Info label={T.location} value={tool.location} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><Info label={T.notes} value={tool.notes || "—"} /></div>{isAdmin && <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> {T.addInspection}</Button>}<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button><Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>{isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
-          <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> Drukuj historię</Button>{isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}{isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}</div><SectionTitle icon={<ClipboardList />} title={T.inspections} /><div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div><SectionTitle icon={<History />} title={T.history} /><div className="max-h-52 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">{history.map((h) => <div key={h.id} className="rounded-xl bg-white p-2 text-xs"><b>{h.action}</b> — {h.date}<br /><span className="text-zinc-500">{h.details}</span><br /><span className="text-zinc-400">Użytkownik: {h.user}</span></div>)}{!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}</div></CardContent></Card>;
+
+  return (
+    <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black">{tool.name}</h2>
+            <p className="text-sm text-zinc-500">{tool.id}</p>
+            {state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> {T.inspectionNeedsAction}</div>}
+          </div>
+          <img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" />
+        </div>
+
+        {tool.photo && <div className="mt-5 w-full max-w-[220px] overflow-hidden rounded-3xl border bg-zinc-50 p-2"><img src={tool.photo} alt={tool.name} className="h-36 w-full rounded-2xl object-cover" /></div>}
+
+        <div className="mt-5 grid gap-3 text-sm">
+          <Info label={T.category} value={tool.category} />
+          <Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} />
+          <Info label={T.serial} value={tool.serial} />
+          <Info label={T.project} value={tool.project} />
+          <Info label={T.location} value={tool.location} />
+          <Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} />
+          <Info label={T.notes} value={tool.notes || "—"} />
+        </div>
+
+        {isAdmin && <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> {T.addInspection}</Button>}
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button>
+          <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>
+          {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
+          <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> Drukuj historię</Button>
+          {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
+          {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
+        </div>
+
+        <SectionTitle icon={<ClipboardList />} title={T.inspections} />
+        <div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div>
+
+        <SectionTitle icon={<History />} title={T.history} />
+        <div className="max-h-52 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">{history.map((h) => <div key={h.id} className="rounded-xl bg-white p-2 text-xs"><b>{h.action}</b> — {h.date}<br /><span className="text-zinc-500">{h.details}</span><br /><span className="text-zinc-400">Użytkownik: {h.user}</span></div>)}{!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}</div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function InspectionCard({ inspection, T }) {
@@ -958,7 +1119,14 @@ function InspectionCard({ inspection, T }) {
 }
 
 function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
-  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label="Nazwa" value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label="Marka" value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
+  function handlePhoto(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setForm({ ...form, photo: String(reader.result || "") });
+    reader.readAsDataURL(file);
+  }
+
+  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label="Nazwa" value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label="Marka" value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">Zdjęcie sprzętu</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img src={form.photo} alt="Podgląd" className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>Usuń zdjęcie</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
 }
 
 function InspectionModal({ T, onClose, onSave }) {
@@ -974,14 +1142,14 @@ function SettingsModal({ T, settings, setSettings, onClose }) {
   const [pins, setPins] = useState(Object.entries(settings.pins || {}).map(([k, v]) => `${k}:${v}`).join(NL));
   const [roles, setRoles] = useState(Object.entries(settings.roles || {}).map(([k, v]) => `${k}:${v}`).join(NL));
   const clean = (text) => text.split(NL).map((x) => x.trim()).filter(Boolean);
-  async function save() {
+  function save() {
     const pinObj = {};
     clean(pins).forEach((line) => { const [name, pin] = line.split(":"); if (name && pin) pinObj[name.trim()] = pin.trim(); });
     const roleObj = {};
     clean(roles).forEach((line) => { const [name, role] = line.split(":"); if (name && role) roleObj[name.trim()] = role.trim(); });
     const nextSettings = { people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj, roles: roleObj };
     setSettings(nextSettings);
-    if (supabase) await supabase.from("settings").upsert({ id: "main", data: nextSettings });
+    if (supabase) supabase.from("settings").upsert({ id: "main", data: nextSettings });
     onClose();
   }
   return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><ModalFooter T={T} onClose={onClose} onSave={save} /></Modal>;
@@ -1005,21 +1173,14 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
 
   async function startScanner() {
     setScanError("");
-
     if (typeof window === "undefined" || !("BarcodeDetector" in window)) {
       setScanError("Ten telefon/przeglądarka nie wspiera automatycznego skanowania QR. Użyj Chrome na Androidzie albo wklej kod ręcznie.");
       return;
     }
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       streamRef.current = stream;
       setScanning(true);
-
       setTimeout(async () => {
         if (!videoRef.current) return;
         videoRef.current.srcObject = stream;
@@ -1027,31 +1188,26 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
         scanLoop();
       }, 200);
     } catch (e) {
-      setScanError("Nie udało się otworzyć aparatu. Sprawdź, czy strona ma zgodę na kamerę i czy działa przez HTTPS albo localhost.");
+      setScanError("Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.");
     }
   }
 
   async function scanLoop() {
     if (!videoRef.current || !streamRef.current) return;
-
     try {
       const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
       const codes = await detector.detect(videoRef.current);
-
       if (codes && codes.length) {
         const value = codes[0].rawValue || "";
         stopScanner();
-
         const url = new URL(value, window.location.href);
         const transfer = url.searchParams.get("transfer");
         const finalCode = transfer || value;
-
         setCode(finalCode);
         onClaim(finalCode);
         return;
       }
     } catch (e) {}
-
     requestAnimationFrame(scanLoop);
   }
 
@@ -1063,22 +1219,7 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
     setScanning(false);
   }
 
-  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={() => { stopScanner(); onClose(); }} /><div className="p-6">
-    <div className="grid gap-4 md:grid-cols-2">
-      <div>
-        <Button onClick={startScanner} className="w-full rounded-2xl bg-emerald-600 py-6 text-base font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-5 w-5" /> Otwórz aparat i skanuj QR</Button>
-        {scanning && <div className="mt-4 overflow-hidden rounded-3xl border bg-black p-2"><video ref={videoRef} className="h-72 w-full rounded-2xl object-cover" playsInline muted /></div>}
-        {scanning && <Button onClick={stopScanner} variant="outline" className="mt-3 w-full rounded-2xl">Zamknij aparat</Button>}
-        {scanError && <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{scanError}</div>}
-      </div>
-
-      <div>
-        <textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} />
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div>
-        <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => { stopScanner(); onClose(); }}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div>
-      </div>
-    </div>
-  </div></Modal>;
+  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={() => { stopScanner(); onClose(); }} /><div className="p-6"><div className="grid gap-4 md:grid-cols-2"><div><Button onClick={startScanner} className="w-full rounded-2xl bg-emerald-600 py-6 text-base font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-5 w-5" /> Otwórz aparat i skanuj QR</Button>{scanning && <div className="mt-4 overflow-hidden rounded-3xl border bg-black p-2"><video ref={videoRef} className="h-72 w-full rounded-2xl object-cover" playsInline muted /></div>}{scanning && <Button onClick={stopScanner} variant="outline" className="mt-3 w-full rounded-2xl">Zamknij aparat</Button>}{scanError && <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{scanError}</div>}</div><div><textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} /><div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => { stopScanner(); onClose(); }}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div></div></div></div></Modal>;
 }
 
 function Modal({ children, wide }) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className={`max-h-[92vh] w-full overflow-auto rounded-3xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-3xl"}`}>{children}</motion.div></div>; }
