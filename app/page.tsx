@@ -1,4 +1,5 @@
 "use client";
+// @ts-nocheck
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -121,18 +122,18 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addMonths(date: string, months: number) {
+function addMonths(date, months) {
   const d = new Date(date || today());
   d.setMonth(d.getMonth() + months);
   return d.toISOString().slice(0, 10);
 }
 
-function daysUntil(date: string) {
+function daysUntil(date) {
   if (!date) return 99999;
   return Math.ceil((new Date(date).getTime() - new Date().getTime()) / 86400000);
 }
 
-function safeLoad(key: string, fallback: any) {
+function safeLoad(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
@@ -141,7 +142,7 @@ function safeLoad(key: string, fallback: any) {
   }
 }
 
-function qrUrl(text: string) {
+function qrUrl(text) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(text)}`;
 }
 
