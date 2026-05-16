@@ -127,7 +127,7 @@ function addMonths(date: string, months: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function daysUntil(date) {
+function daysUntil(date: string) {
   if (!date) return 99999;
   return Math.ceil((new Date(date).getTime() - new Date().getTime()) / 86400000);
 }
