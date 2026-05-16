@@ -132,7 +132,7 @@ function daysUntil(date: string) {
   return Math.ceil((new Date(date).getTime() - new Date().getTime()) / 86400000);
 }
 
-function safeLoad(key, fallback) {
+function safeLoad(key: string, fallback: any) {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
