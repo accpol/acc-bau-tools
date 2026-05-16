@@ -1208,12 +1208,19 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
   async function save() {
     setSaving(true);
 
-    const currentItem = history.find((h) => h.id === context.historyId) || context.historyItem;
+    let currentItem = history.find((h) => h.id === context.historyId) || context.historyItem;
 
     if (!currentItem) {
-      alert("Nie znaleziono wpisu historii. Zamknij okno i spróbuj ponownie.");
-      setSaving(false);
-      return;
+      currentItem = {
+        id: context.historyId || crypto.randomUUID?.() || String(Date.now()),
+        toolId: context.tool?.id || "",
+        date: new Date().toLocaleString("pl-PL"),
+        user: context.mode === "giver" ? context.tool?.assignedTo || "" : "",
+        action: context.mode === "giver" ? "Kod przekazania" : "Przejęcie",
+        details: context.mode === "giver" ? "Zdjęcia dodane przy przekazaniu" : "Zdjęcia dodane przy przejęciu",
+        photosFromGiver: [],
+        photosFromReceiver: [],
+      };
     }
 
     const updatedItem = {
