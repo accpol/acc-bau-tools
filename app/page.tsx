@@ -1,3 +1,5 @@
+// @ts-nocheck
+"use client";
 "use client";
 // @ts-nocheck
 
