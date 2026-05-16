@@ -400,6 +400,44 @@ function load(key, fallback) {
   }
 }
 
+async function compressImage(file, maxSize = 1200, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          let width = img.width;
+          let height = img.height;
+          const scale = Math.min(1, maxSize / Math.max(width, height));
+
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } catch (e) {
+          reject(e);
+        }
+      };
+
+      img.onerror = reject;
+      img.src = String(reader.result || "");
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function qrUrl(text) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(text)}`;
 }
@@ -1226,11 +1264,16 @@ function InspectionCard({ inspection, T }) {
 }
 
 function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
-  function handlePhoto(file) {
+  async function handlePhoto(file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm({ ...form, photo: String(reader.result || "") });
-    reader.readAsDataURL(file);
+
+    try {
+      const compressed = await compressImage(file, 1200, 0.7);
+      setForm({ ...form, photo: compressed });
+    } catch (e) {
+      alert("Nie udało się przygotować zdjęcia. Spróbuj mniejsze zdjęcie.");
+      console.error(e);
+    }
   }
 
   return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label="Nazwa" value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label="Marka" value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">Zdjęcie sprzętu</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img src={form.photo} alt="Podgląd" className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>Usuń zdjęcie</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
@@ -1286,15 +1329,18 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
   const uploadRef = useRef(null);
   const field = context.mode === "giver" ? "photosFromGiver" : "photosFromReceiver";
 
-  function addPhotos(files) {
+  async function addPhotos(files) {
     const selectedFiles = Array.from(files || []).slice(0, 6);
-    selectedFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotos((prev) => [...prev, String(reader.result || "")]);
-      };
-      reader.readAsDataURL(file);
-    });
+
+    for (const file of selectedFiles) {
+      try {
+        const compressed = await compressImage(file, 1000, 0.65);
+        setPhotos((prev) => [...prev, compressed]);
+      } catch (e) {
+        alert("Nie udało się przygotować zdjęcia. Spróbuj mniejsze zdjęcie.");
+        console.error(e);
+      }
+    }
   }
 
   function removePhoto(index) {
@@ -1334,7 +1380,11 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
 
     if (supabase) {
       const { error } = await supabase.from("history").upsert({ id: updatedItem.id, data: updatedItem });
-      if (error) alert("Nie udało się zapisać zdjęć w Supabase: " + error.message);
+      if (error) {
+        alert("Nie udało się zapisać zdjęć w Supabase: " + error.message + "\n\nSpróbuj dodać mniej zdjęć albo mniejsze zdjęcia.");
+        setSaving(false);
+        return;
+      }
     }
 
     setSaving(false);
