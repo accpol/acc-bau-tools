@@ -141,7 +141,7 @@ function safeLoad(key: string, fallback: any) {
   }
 }
 
-function qrUrl(text) {
+function qrUrl(text: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(text)}`;
 }
 
