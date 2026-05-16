@@ -1,7 +1,5 @@
 // @ts-nocheck
 "use client";
-"use client";
-// @ts-nocheck
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -59,6 +57,13 @@ const defaultSettings = {
     Kowalski: "1234",
     "Gunter Hecker": "1234",
     "Marek Nowak": "1234",
+  },
+  roles: {
+    "Aleksander Czarnecki": "admin",
+    "Gunter Hecker": "admin",
+    Klepacki: "worker",
+    Kowalski: "worker",
+    "Marek Nowak": "worker",
   },
 };
 
@@ -155,6 +160,15 @@ function toolLink(id) {
   return url.toString();
 }
 
+function publicToolLink(id) {
+  if (typeof window === "undefined") return id;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("tool");
+  url.searchParams.delete("transfer");
+  url.searchParams.set("publicTool", id);
+  return url.toString();
+}
+
 function encodeTransfer(ticket) {
   return btoa(unescape(encodeURIComponent(JSON.stringify(ticket))));
 }
@@ -218,6 +232,7 @@ export default function App() {
   const [transferCode, setTransferCode] = useState("");
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
+  const [publicToolId, setPublicToolId] = useState("");
   const fileInput = useRef(null);
 
   useEffect(() => {
@@ -231,7 +246,9 @@ export default function App() {
     setUser(storedUser);
     const params = new URLSearchParams(window.location.search);
     const toolId = params.get("tool");
+    const publicTool = params.get("publicTool");
     const claim = params.get("transfer");
+    if (publicTool) setPublicToolId(publicTool);
     if (claim) {
       setTransferCode(claim);
       setShowClaim(true);
@@ -274,6 +291,9 @@ export default function App() {
     free: tools.filter((t) => t.status === "Dostępne").length,
     danger: tools.filter((t) => inspectionState(t).danger).length,
   }), [tools]);
+
+  const role = settings.roles?.[user] || "worker";
+  const isAdmin = role === "admin";
 
   function log(tool, action, details) {
     setHistory((h) => [{ id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details }, ...h]);
@@ -422,18 +442,23 @@ export default function App() {
   }
 
   function printLabel(tool) {
-    const url = toolLink(tool.id);
+    const url = publicToolLink(tool.id);
     const html = `<html><body style="font-family:Arial"><div style="width:360px;border:2px solid #111;border-radius:16px;padding:16px"><h2>ACC BAU</h2><h3>${tool.id}</h3><img src="${qrUrl(url)}" style="width:170px;height:170px"><p><b>${tool.name}</b><br>${tool.brand} ${tool.model}<br>SN: ${tool.serial}</p></div><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
     w.document.write(html);
     w.document.close();
   }
 
+  if (publicToolId) {
+    const publicTool = tools.find((t) => t.id === publicToolId);
+    return <PublicToolView tool={publicTool} onBack={() => setPublicToolId("")} />;
+  }
+
   if (!user) return <LoginScreen settings={settings} onLogin={login} />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 text-zinc-950">
-      <Header user={user} onLogout={logout} onClaim={() => setShowClaim(true)} onExcel={exportExcel} onBackup={backup} onImport={() => fileInput.current?.click()} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
+      <Header user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onExcel={exportExcel} onBackup={backup} onImport={() => fileInput.current?.click()} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
       <input ref={fileInput} type="file" accept="application/json" className="hidden" onChange={restore} />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-5">
@@ -481,7 +506,7 @@ export default function App() {
           </Card>
 
           <aside className="space-y-5">
-            {selected && <ToolDetails tool={selected} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={() => { setTools((prev) => prev.filter((t) => t.id !== selected.id)); setSelected(tools[0] || null); }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onDamaged={markDamaged} onPrint={() => printLabel(selected)} />}
+            {selected && <ToolDetails tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={() => { setTools((prev) => prev.filter((t) => t.id !== selected.id)); setSelected(tools[0] || null); }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onDamaged={markDamaged} onPrint={() => printLabel(selected)} />}
             <InfoBox />
           </aside>
         </section>
@@ -496,7 +521,7 @@ export default function App() {
   );
 }
 
-function Header({ user, onLogout, onClaim, onExcel, onBackup, onImport, onSettings, onDemo, onAdd }) {
+function Header({ user, role, isAdmin, onLogout, onClaim, onExcel, onBackup, onImport, onSettings, onDemo, onAdd }) {
   return (
     <header className="border-b border-white/10 bg-zinc-950 text-white shadow-2xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -509,14 +534,14 @@ function Header({ user, onLogout, onClaim, onExcel, onBackup, onImport, onSettin
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="flex items-center rounded-xl border border-white/20 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-white"><User className="mr-2 h-4 w-4" /> Zalogowany: {user}</div>
+          <div className="flex items-center rounded-xl border border-white/20 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-white"><User className="mr-2 h-4 w-4" /> {user} • {role === "admin" ? "ADMIN" : "PRACOWNIK"}</div>
           <Button onClick={onClaim} className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600"><ScanLine className="mr-2 h-4 w-4" /> Przejmij</Button>
-          <Button onClick={onExcel} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</Button>
-          <Button onClick={onBackup} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><Database className="mr-2 h-4 w-4" /> Backup</Button>
-          <Button onClick={onImport} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><Upload className="mr-2 h-4 w-4" /> Import</Button>
-          <Button onClick={onSettings} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">Ustawienia</Button>
-          <Button onClick={onDemo} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><RotateCcw className="mr-2 h-4 w-4" /> Demo</Button>
-          <Button onClick={onAdd} className="rounded-xl bg-yellow-500 text-zinc-950 hover:bg-yellow-400"><Plus className="mr-2 h-4 w-4" /> Dodaj</Button>
+          {isAdmin && <Button onClick={onExcel} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</Button>}
+          {isAdmin && <Button onClick={onBackup} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><Database className="mr-2 h-4 w-4" /> Backup</Button>}
+          {isAdmin && <Button onClick={onImport} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><Upload className="mr-2 h-4 w-4" /> Import</Button>}
+          {isAdmin && <Button onClick={onSettings} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">Ustawienia</Button>}
+          {isAdmin && <Button onClick={onDemo} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><RotateCcw className="mr-2 h-4 w-4" /> Demo</Button>}
+          {isAdmin && <Button onClick={onAdd} className="rounded-xl bg-yellow-500 text-zinc-950 hover:bg-yellow-400"><Plus className="mr-2 h-4 w-4" /> Dodaj</Button>}
           <Button onClick={onLogout} className="rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><LogOut className="mr-2 h-4 w-4" /> Wyloguj</Button>
         </div>
       </div>
@@ -543,6 +568,62 @@ function Hero() {
   );
 }
 
+function PublicToolView({ tool, onBack }) {
+  if (!tool) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-6 text-white">
+        <div className="mx-auto max-w-3xl rounded-3xl bg-white p-6 text-zinc-950 shadow-2xl">
+          <h1 className="text-2xl font-black">ACC Bau • Informacja BHP</h1>
+          <p className="mt-3 text-red-600">Nie znaleziono sprzętu dla tego kodu QR.</p>
+          <Button onClick={onBack} className="mt-5 bg-zinc-950 text-white">Powrót</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const inspections = allInspections(tool);
+  const state = inspectionState(tool);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 p-4 text-white sm:p-8">
+      <div className="mx-auto max-w-4xl overflow-hidden rounded-[32px] bg-white text-zinc-950 shadow-2xl">
+        <div className="bg-zinc-950 p-6 text-white sm:p-8">
+          <div className="mb-3 inline-flex rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-yellow-300">
+            ACC BAU • PUBLIC EQUIPMENT INFO
+          </div>
+          <h1 className="text-3xl font-black sm:text-5xl">{tool.name}</h1>
+          <p className="mt-2 text-zinc-300">Informacje po zeskanowaniu kodu QR — bez logowania.</p>
+        </div>
+
+        <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-8">
+          <Info label="ID sprzętu" value={tool.id} />
+          <Info label="Numer seryjny" value={tool.serial || "—"} />
+          <Info label="Marka / model" value={`${tool.brand || "—"} ${tool.model || ""}`} />
+          <Info label="Kategoria" value={tool.category || "—"} />
+          <Info label="Status" value={tool.status || "—"} />
+          <Info label="Projekt / lokalizacja" value={`${tool.project || "—"} / ${tool.location || "—"}`} />
+          <Info label="Aktualny posiadacz" value={tool.assignedTo || "Magazyn / nieprzypisane"} />
+          <div className={`rounded-2xl border px-4 py-3 ${state.cls}`}>
+            <p className="text-xs font-semibold opacity-80">Status przeglądu BHP</p>
+            <p className="text-lg font-black">{state.label}</p>
+          </div>
+        </div>
+
+        <div className="px-5 pb-6 sm:px-8">
+          <h2 className="mb-3 text-lg font-black">Badania / przeglądy / certyfikaty</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {inspections.length ? inspections.map((i) => <InspectionCard key={i.id} inspection={i} />) : <div className="rounded-2xl border bg-red-50 p-4 text-red-700">Brak wpisanych przeglądów.</div>}
+          </div>
+          <div className="mt-5 rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-600">
+            <b>Uwagi:</b><br />{tool.notes || "Brak uwag."}
+          </div>
+          <p className="mt-5 text-xs text-zinc-400">Ten widok jest publiczny i służy do szybkiej kontroli BHP / identyfikacji sprzętu. Edycja wymaga logowania administratora.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LoginScreen({ settings, onLogin }) {
   const [name, setName] = useState(settings.people[0] || "");
   const [pin, setPin] = useState("");
@@ -565,20 +646,23 @@ function ToolRow({ tool, active, onClick }) {
     <motion.div whileHover={{ y: -3, scale: 1.01 }} onClick={onClick} className={`cursor-pointer rounded-[26px] border bg-gradient-to-br from-white to-zinc-50 p-4 shadow-sm transition hover:shadow-2xl ${active ? "border-zinc-950" : state.danger ? "border-red-300" : "border-zinc-200"}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold">{tool.name}</h3><Badge cls={statusCls(tool.status)}>{tool.status}</Badge><Badge cls={state.cls}>{state.label}</Badge>{state.danger && <Badge cls="bg-red-600 text-white border-red-600">UWAGA</Badge>}</div><p className="mt-1 text-sm text-zinc-500">{tool.id} • {tool.brand} {tool.model} • SN: {tool.serial}</p><div className="mt-3 flex flex-wrap gap-3 text-xs text-zinc-600"><span><Building2 className="mr-1 inline h-3.5 w-3.5" />{tool.project}</span><span><MapPin className="mr-1 inline h-3.5 w-3.5" />{tool.location}</span><span><User className="mr-1 inline h-3.5 w-3.5" />{tool.assignedTo || "nieprzypisane"}</span><span><CalendarDays className="mr-1 inline h-3.5 w-3.5" />{u?.nextDate || "brak"}</span></div></div>
-        <img src={qrUrl(toolLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border-4 border-white bg-white p-1 shadow-lg" />
+        <img src={qrUrl(publicToolLink(tool.id))} alt="QR publiczny" className="h-16 w-16 rounded-2xl border-4 border-white bg-white p-1 shadow-lg" />
       </div>
     </motion.div>
   );
 }
 
-function ToolDetails({ tool, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onDamaged, onPrint }) {
+function ToolDetails({ tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onDamaged, onPrint }) {
   const state = inspectionState(tool);
   return (
     <Card className={`rounded-[28px] shadow-2xl ${state.danger ? "border-red-300" : "border-zinc-200"}`}>
-      <CardContent className="p-5"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">{tool.name}</h2><p className="text-sm text-zinc-500">{tool.id}</p>{state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> Przegląd wymaga reakcji</div>}</div><img src={qrUrl(toolLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border-4 border-white bg-white p-2 shadow-2xl" /></div>
+      <CardContent className="p-5"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">{tool.name}</h2><p className="text-sm text-zinc-500">{tool.id}</p>{state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> Przegląd wymaga reakcji</div>}</div><img src={qrUrl(publicToolLink(tool.id))} alt="QR publiczny" className="h-24 w-24 rounded-3xl border-4 border-white bg-white p-2 shadow-2xl" /></div>
         <div className="mt-5 grid gap-3 text-sm"><Info label="Kategoria" value={tool.category} /><Info label="Marka / model" value={`${tool.brand} ${tool.model}`} /><Info label="Serial" value={tool.serial} /><Info label="Projekt" value={tool.project} /><Info label="Lokalizacja" value={tool.location} /><Info label="Aktualny posiadacz" value={tool.assignedTo || "Magazyn / nieprzypisane"} /><Info label="Uwagi" value={tool.notes || "—"} /></div>
-        <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> Dodaj kolejny przegląd</Button>
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> Pokaż kod przekazania</Button><Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> Zwrot</Button><Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> Drukuj QR</Button><Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> Edytuj</Button><Button onClick={onDamaged} variant="outline" className="rounded-2xl text-red-600"><AlertTriangle className="mr-2 h-4 w-4" /> Uszkodzone</Button><Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Usuń</Button></div>
+        {isAdmin && <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> Dodaj kolejny przegląd</Button>}
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> Pokaż kod przekazania</Button><Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> Zwrot</Button>{isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> Drukuj QR</Button>}
+          {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> Edytuj</Button>}
+          {isAdmin && <Button onClick={onDamaged} variant="outline" className="rounded-2xl text-red-600"><AlertTriangle className="mr-2 h-4 w-4" /> Uszkodzone</Button>}
+          {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Usuń</Button>}</div>
         <SectionTitle icon={<ClipboardList />} title="Rejestr przeglądów / certyfikatów" />
         <div className="grid gap-3 md:grid-cols-2">{allInspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} />)}{!allInspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">Brak przeglądów.</p>}</div>
         <SectionTitle icon={<History />} title="Historia operacji" />
@@ -618,24 +702,22 @@ function SettingsModal({ settings, setSettings, onClose }) {
   const [people, setPeople] = useState(settings.people.join("\n"));
   const [projects, setProjects] = useState(settings.projects.join("\n"));
   const [categories, setCategories] = useState(settings.categories.join("\n"));
-  const [pins, setPins] = useState(Object.entries(settings.pins || {}).map(([k, v]) => `${k}:${v}`).join("\n"));
+  const [pins, setPins] = useState(Object.entries(settings.pins || {}).map(([k, v]) => `${k}:${v}`).join("
+"));
+  const [roles, setRoles] = useState(Object.entries(settings.roles || {}).map(([k, v]) => `${k}:${v}`).join("
+"));
   const clean = (t) => t.split("\n").map((x) => x.trim()).filter(Boolean);
   function save() {
     const pinObj = {};
     clean(pins).forEach((line) => { const [name, pin] = line.split(":"); if (name && pin) pinObj[name.trim()] = pin.trim(); });
-    setSettings({ people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj });
+    const roleObj = {};
+    clean(roles).forEach((line) => { const [name, role] = line.split(":"); if (name && role) roleObj[name.trim()] = role.trim(); });
+    setSettings({ people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj, roles: roleObj });
     onClose();
   }
-  return <Modal wide><div className="flex items-center justify-between border-b px-6 py-4"><div><h2 className="text-lg font-bold">Ustawienia</h2><p className="text-sm text-zinc-500">Każda pozycja w osobnej linii. PIN wpisuj: Imię:1234</p></div><Button variant="ghost" onClick={onClose}><X /></Button></div><div className="grid gap-4 p-6 md:grid-cols-4"><TextList title="Pracownicy" value={people} setValue={setPeople} /><TextList title="Budowy / magazyny" value={projects} setValue={setProjects} /><TextList title="Kategorie" value={categories} setValue={setCategories} /><TextList title="PIN-y" value={pins} setValue={setPins} /></div><div className="flex justify-end gap-2 border-t px-6 py-4"><Button variant="outline" onClick={onClose}>Anuluj</Button><Button onClick={save} className="bg-zinc-950 hover:bg-zinc-800">Zapisz</Button></div></Modal>;
+  return <Modal wide><div className="flex items-center justify-between border-b px-6 py-4"><div><h2 className="text-lg font-bold">Ustawienia</h2><p className="text-sm text-zinc-500">PIN wpisuj: Imię:1234. Uprawnienia wpisuj: Imię:admin albo Imię:worker</p></div><Button variant="ghost" onClick={onClose}><X /></Button></div><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title="Pracownicy" value={people} setValue={setPeople} /><TextList title="Budowy / magazyny" value={projects} setValue={setProjects} /><TextList title="Kategorie" value={categories} setValue={setCategories} /><TextList title="PIN-y" value={pins} setValue={setPins} /><TextList title="Uprawnienia" value={roles} setValue={setRoles} /></div><div className="flex justify-end gap-2 border-t px-6 py-4"><Button variant="outline" onClick={onClose}>Anuluj</Button><Button onClick={save} className="bg-zinc-950 hover:bg-zinc-800">Zapisz</Button></div></Modal>;
 }
 
 function Modal({ children, wide }) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className={`max-h-[92vh] w-full overflow-auto rounded-3xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-3xl"}`}>{children}</motion.div></div>; }
 function TextList({ title, value, setValue }) { return <label><span className="mb-2 block text-sm font-bold">{title}</span><textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-72 w-full rounded-xl border p-3 text-sm" /></label>; }
-function InfoBox() { return <Card className="rounded-[28px] shadow-2xl"><CardContent className="p-5"><div className="flex items-center gap-2 font-bold"><ShieldCheck className="h-5 w-5" /> Zasada bezpiecznego przekazania</div><ol className="mt-3 space-y-2 text-sm text-zinc-600"><li>1. Aktualny posiadacz pokazuje kod przekazania.</li><li>2. Nowy pracownik loguje się u siebie.</li><li>3. Klika „Przejmij” i skanuje/wkleja kod.</li><li>4. System zapisuje historię: kto komu przekazał.</li></ol></CardContent></Card>; }
-function SectionTitle({ icon, title }) { return <div className="mb-2 mt-6 flex items-center gap-2 font-bold">{React.cloneElement(icon, { className: "h-4 w-4" })} {title}</div>; }
-function StatCard({ icon, label, value, danger }) { return <Card className="rounded-[26px] border-white/30 bg-white/95 shadow-xl"><CardContent className="flex items-center gap-4 p-5"><div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${danger ? "bg-red-100 text-red-700" : "bg-zinc-100 text-zinc-900"}`}>{React.cloneElement(icon, { className: "h-6 w-6" })}</div><div><p className="text-sm text-zinc-500">{label}</p><p className="text-2xl font-black">{value}</p></div></CardContent></Card>; }
-function Select({ label, value, setValue, options }) { return <label><span className="mb-1 flex items-center gap-1 text-xs font-bold text-zinc-500"><Filter className="h-3.5 w-3.5" /> {label}</span><select value={value} onChange={(e) => setValue(e.target.value)} className="w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
-function FormSelect({ label, value, options, onChange }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
-function Field({ label, value, onChange, type = "text" }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2" /></label>; }
-function Info({ label, value }) { return <div className="rounded-2xl border bg-zinc-50 px-3 py-2"><p className="text-xs text-zinc-500">{label}</p><p className="whitespace-pre-line font-semibold text-zinc-900">{value}</p></div>; }
-function Badge({ children, cls }) { return <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${cls}`}>{children}</span>; }
+function InfoBox() { return <Card className="rounded-[28px] shadow-2xl"><CardContent className="p-5"><div className="flex items-center gap-2 font-bold"><ShieldCheck className="h-5 w-5" /> Zasada bezpiecznego przekazania</div><ol className="mt-3 space-y-2 text-sm text-zinc-600"><li>1. Aktualny posiadacz pokazuje kod przekazania.</li><li>2. Nowy pracownik loguje się u s
