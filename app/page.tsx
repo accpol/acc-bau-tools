@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -34,6 +35,10 @@ const HISTORY_KEY = "acc_history_v6";
 const SETTINGS_KEY = "acc_settings_v6";
 const USER_KEY = "acc_user_v6";
 const LANG_KEY = "acc_lang_v6";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const I18N = {
   pl: {
@@ -469,23 +474,25 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [transferCode, setTransferCode] = useState("");
   const [publicToolId, setPublicToolId] = useState("");
+  const [dbLoaded, setDbLoaded] = useState(false);
+  const [dbStatus, setDbStatus] = useState("local");
 
   const T = I18N[lang] || I18N.pl;
 
   useEffect(() => {
-    const t = load(STORAGE_KEY, defaultTools);
-    const s = load(SETTINGS_KEY, defaultSettings);
-    const h = load(HISTORY_KEY, []);
+    initApp();
+  }, []);
+
+  async function initApp() {
     const u = localStorage.getItem(USER_KEY) || "";
     const storedLang = localStorage.getItem(LANG_KEY) || "pl";
     const params = new URLSearchParams(window.location.search);
     const publicTool = params.get("publicTool");
     const transfer = params.get("transfer");
-    setTools(t);
-    setSettings(s);
-    setHistory(h);
+
     setUser(u);
     setLang(storedLang);
     if (publicTool) setPublicToolId(publicTool);
@@ -493,14 +500,74 @@ export default function App() {
       setTransferCode(transfer);
       setShowClaim(true);
     }
-    setSelected(t[0] || null);
-  }, []);
+
+    if (!supabase) {
+      const t = load(STORAGE_KEY, defaultTools);
+      const s = load(SETTINGS_KEY, defaultSettings);
+      const h = load(HISTORY_KEY, []);
+      setTools(t);
+      setSettings(s);
+      setHistory(h);
+      setSelected(t[0] || null);
+      setDbStatus("local");
+      setDbLoaded(true);
+      return;
+    }
+
+    try {
+      setDbStatus("loading");
+      const [toolsRes, settingsRes, historyRes] = await Promise.all([
+        supabase.from("tools").select("id,data").order("id"),
+        supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
+        supabase.from("history").select("id,data").order("created_at", { ascending: false }),
+      ]);
+
+      let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean);
+      let loadedSettings = settingsRes.data?.data || null;
+      let loadedHistory = (historyRes.data || []).map((row) => ({ id: row.id, ...(row.data || {}) }));
+
+      if (!loadedSettings) {
+        await supabase.from("settings").upsert({ id: "main", data: defaultSettings });
+        loadedSettings = defaultSettings;
+      }
+
+      if (!loadedTools.length) {
+        await supabase.from("tools").upsert(defaultTools.map((tool) => ({ id: tool.id, data: tool })));
+        loadedTools = defaultTools;
+      }
+
+      setTools(loadedTools);
+      setSettings(loadedSettings);
+      setHistory(loadedHistory);
+      setSelected(loadedTools[0] || null);
+      setDbStatus("online");
+      setDbLoaded(true);
+    } catch (e) {
+      console.error(e);
+      const t = load(STORAGE_KEY, defaultTools);
+      const s = load(SETTINGS_KEY, defaultSettings);
+      const h = load(HISTORY_KEY, []);
+      setTools(t);
+      setSettings(s);
+      setHistory(h);
+      setSelected(t[0] || null);
+      setDbStatus("error");
+      setDbLoaded(true);
+    }
+  }
 
   useEffect(() => {
-    if (tools.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
-  }, [tools]);
-  useEffect(() => localStorage.setItem(HISTORY_KEY, JSON.stringify(history)), [history]);
-  useEffect(() => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)), [settings]);
+    if (!dbLoaded) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+  }, [tools, dbLoaded]);
+  useEffect(() => {
+    if (!dbLoaded) return;
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }, [history, dbLoaded]);
+  useEffect(() => {
+    if (!dbLoaded) return;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings, dbLoaded]);
   useEffect(() => localStorage.setItem(LANG_KEY, lang), [lang]);
 
   const role = settings.roles?.[user] || "worker";
@@ -538,11 +605,12 @@ export default function App() {
     danger: tools.filter((t) => inspectionStatus(t, T).danger).length,
   };
 
-  function log(tool, action, details) {
-    setHistory((prev) => [
-      { id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details },
-      ...prev,
-    ]);
+  async function log(tool, action, details) {
+    const item = { id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details };
+    setHistory((prev) => [item, ...prev]);
+    if (supabase) {
+      await supabase.from("history").insert({ id: item.id, data: item });
+    }
   }
 
   function login(name, pin) {
@@ -571,19 +639,21 @@ export default function App() {
     setShowToolForm(true);
   }
 
-  function saveTool() {
+  async function saveTool() {
     if (!isAdmin) return alert(T.noPermission);
     if (!toolForm.id || !toolForm.name) return alert(T.enterIdName);
     if (editing) setTools((prev) => prev.map((t) => (t.id === toolForm.id ? toolForm : t)));
     else setTools((prev) => [toolForm, ...prev]);
     setSelected(toolForm);
+    if (supabase) await supabase.from("tools").upsert({ id: toolForm.id, data: toolForm });
     log(toolForm, editing ? T.edit : T.add, editing ? "Zmieniono dane" : "Dodano sprzęt");
     setShowToolForm(false);
   }
 
-  function updateTool(tool, action, details) {
+  async function updateTool(tool, action, details) {
     setTools((prev) => prev.map((t) => (t.id === tool.id ? tool : t)));
     setSelected(tool);
+    if (supabase) await supabase.from("tools").upsert({ id: tool.id, data: tool });
     log(tool, action, details);
   }
 
@@ -620,7 +690,27 @@ export default function App() {
 
   function returnTool() {
     if (!selected) return;
-    updateTool({ ...selected, status: "Dostępne", assignedTo: "" }, T.returnTool, "Zwrócono do magazynu");
+    updateTool({ ...selected, status: "Dostępne", assignedTo: "" }, T.returnTool, `Zwrócono do magazynu z: ${selected.assignedTo || "brak"}`);
+  }
+
+  function printHistory(list = history, title = "ACC Bau - historia przekazań") {
+    const rows = list.map((h) => {
+      const tool = tools.find((t) => t.id === h.toolId);
+      return {
+        date: h.date,
+        toolId: h.toolId,
+        toolName: tool?.name || "",
+        serial: tool?.serial || "",
+        action: h.action,
+        details: h.details,
+        user: h.user,
+      };
+    });
+
+    const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">Wydruk: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Data</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Urządzenie</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Akcja</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Szczegóły / kto komu</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Użytkownik</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${r.action}</td><td style="border:1px solid #ccc;padding:7px">${r.details}</td><td style="border:1px solid #ccc;padding:7px">${r.user}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
   }
 
   function exportExcel() {
@@ -672,7 +762,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.18),transparent_32%),linear-gradient(135deg,#09090b_0%,#18181b_42%,#27272a_100%)] text-zinc-950">
-      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
+      {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">Ładowanie bazy danych...</div></div></div>}
+      {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">Uwaga: brak połączenia z Supabase. Aplikacja działa lokalnie.</div></div>}
+      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -715,7 +807,7 @@ export default function App() {
           </Card>
 
           <aside className="space-y-5">
-            {selected && <ToolDetails T={T} tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={() => { if (!isAdmin) return alert(T.noPermission); setTools((prev) => prev.filter((t) => t.id !== selected.id)); setSelected(tools[0] || null); }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} />}
+            {selected && <ToolDetails T={T} tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={async () => { if (!isAdmin) return alert(T.noPermission); setTools((prev) => prev.filter((t) => t.id !== selected.id)); setSelected(tools[0] || null); if (supabase) await supabase.from("tools").delete().eq("id", selected.id); }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -726,6 +818,7 @@ export default function App() {
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} />}
       {showTransfer && selected && <TransferModal T={T} code={transferCode} tool={selected} onClose={() => setShowTransfer(false)} />}
       {showClaim && <ClaimModal T={T} initialCode={transferCode} onClose={() => setShowClaim(false)} onClaim={claimTransfer} />}
+      {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} />}
     </div>
   );
 }
@@ -740,7 +833,7 @@ function LanguageSelect({ lang, setLang, dark = false }) {
   );
 }
 
-function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onExcel, onSettings, onDemo, onAdd }) {
+function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHistory, onExcel, onSettings, onDemo, onAdd }) {
   return (
     <header className="border-b border-white/10 bg-zinc-950/95 text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -756,6 +849,7 @@ function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onEx
           <LanguageSelect lang={lang} setLang={setLang} dark />
           <div className="rounded-xl border border-white/20 bg-emerald-500/20 px-3 py-2 text-sm font-bold">{user} • {role === "admin" ? T.admin : T.worker}</div>
           <Button onClick={onClaim} className="rounded-xl bg-emerald-500 text-white shadow-lg hover:bg-emerald-600"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button>
+          <Button onClick={onHistory} className="rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><History className="mr-2 h-4 w-4" /> {T.history}</Button>
           {isAdmin && <Button onClick={onExcel} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><FileSpreadsheet className="mr-2 h-4 w-4" /> {T.excel}</Button>}
           {isAdmin && <Button onClick={onSettings} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">{T.settings}</Button>}
           {isAdmin && <Button onClick={onDemo} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><RotateCcw className="mr-2 h-4 w-4" /> {T.demo}</Button>}
@@ -785,9 +879,10 @@ function ToolRow({ tool, active, onClick, T }) {
   return <motion.div whileHover={{ y: -2 }} onClick={onClick} className={`cursor-pointer rounded-[26px] border bg-white p-4 shadow-sm transition hover:shadow-xl ${active ? "border-zinc-950 ring-2 ring-zinc-950/10" : state.danger ? "border-red-300" : "border-zinc-200"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black">{tool.name}</h3><Badge cls={badgeStatus(tool.status)}>{tool.status}</Badge><Badge cls={state.cls}>{state.label}</Badge></div><p className="mt-1 text-sm text-zinc-500">{tool.id} • {tool.brand} {tool.model} • SN: {tool.serial}</p><div className="mt-2 text-xs text-zinc-600">{tool.project} • {tool.location} • {tool.assignedTo || T.unassigned} • {T.next}: {u?.nextDate || T.missing}</div></div><img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border bg-white p-1 shadow-sm" /></div></motion.div>;
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint, onPrintHistory }) {
   const state = inspectionStatus(tool, T);
-  return <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]"><CardContent className="p-4 sm:p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">{tool.name}</h2><p className="text-sm text-zinc-500">{tool.id}</p>{state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> {T.inspectionNeedsAction}</div>}</div><img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" /></div><div className="mt-5 grid gap-3 text-sm"><Info label={T.category} value={tool.category} /><Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} /><Info label={T.serial} value={tool.serial} /><Info label={T.project} value={tool.project} /><Info label={T.location} value={tool.location} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><Info label={T.notes} value={tool.notes || "—"} /></div>{isAdmin && <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> {T.addInspection}</Button>}<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button><Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>{isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}{isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}{isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}</div><SectionTitle icon={<ClipboardList />} title={T.inspections} /><div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div><SectionTitle icon={<History />} title={T.history} /><div className="max-h-52 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">{history.map((h) => <div key={h.id} className="rounded-xl bg-white p-2 text-xs"><b>{h.action}</b> — {h.date}<br /><span className="text-zinc-500">{h.details}</span><br /><span className="text-zinc-400">Użytkownik: {h.user}</span></div>)}{!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}</div></CardContent></Card>;
+  return <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]"><CardContent className="p-4 sm:p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">{tool.name}</h2><p className="text-sm text-zinc-500">{tool.id}</p>{state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> {T.inspectionNeedsAction}</div>}</div><img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" /></div><div className="mt-5 grid gap-3 text-sm"><Info label={T.category} value={tool.category} /><Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} /><Info label={T.serial} value={tool.serial} /><Info label={T.project} value={tool.project} /><Info label={T.location} value={tool.location} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><Info label={T.notes} value={tool.notes || "—"} /></div>{isAdmin && <Button onClick={onInspection} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 font-bold hover:bg-zinc-800"><Plus className="mr-2 h-5 w-5" /> {T.addInspection}</Button>}<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button><Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>{isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
+          <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> Drukuj historię</Button>{isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}{isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}</div><SectionTitle icon={<ClipboardList />} title={T.inspections} /><div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div><SectionTitle icon={<History />} title={T.history} /><div className="max-h-52 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">{history.map((h) => <div key={h.id} className="rounded-xl bg-white p-2 text-xs"><b>{h.action}</b> — {h.date}<br /><span className="text-zinc-500">{h.details}</span><br /><span className="text-zinc-400">Użytkownik: {h.user}</span></div>)}{!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}</div></CardContent></Card>;
 }
 
 function InspectionCard({ inspection, T }) {
@@ -813,12 +908,14 @@ function SettingsModal({ T, settings, setSettings, onClose }) {
   const [pins, setPins] = useState(Object.entries(settings.pins || {}).map(([k, v]) => `${k}:${v}`).join(NL));
   const [roles, setRoles] = useState(Object.entries(settings.roles || {}).map(([k, v]) => `${k}:${v}`).join(NL));
   const clean = (text) => text.split(NL).map((x) => x.trim()).filter(Boolean);
-  function save() {
+  async function save() {
     const pinObj = {};
     clean(pins).forEach((line) => { const [name, pin] = line.split(":"); if (name && pin) pinObj[name.trim()] = pin.trim(); });
     const roleObj = {};
     clean(roles).forEach((line) => { const [name, role] = line.split(":"); if (name && role) roleObj[name.trim()] = role.trim(); });
-    setSettings({ people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj, roles: roleObj });
+    const nextSettings = { people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj, roles: roleObj };
+    setSettings(nextSettings);
+    if (supabase) await supabase.from("settings").upsert({ id: "main", data: nextSettings });
     onClose();
   }
   return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><ModalFooter T={T} onClose={onClose} onSave={save} /></Modal>;
@@ -827,6 +924,10 @@ function SettingsModal({ T, settings, setSettings, onClose }) {
 function TransferModal({ T, code, tool, onClose }) {
   const url = transferLink(code);
   return <Modal><ModalHeader title={T.transferCode} subtitle={T.transferCodeSubtitle} onClose={onClose} /><div className="p-6 text-center"><p className="text-lg font-black">{tool.name}</p><p className="text-sm text-zinc-500">{tool.id}</p><img src={qrUrl(url)} alt="QR" className="mx-auto mt-5 h-64 w-64 rounded-3xl border bg-white p-3 shadow-xl" /><textarea value={code} readOnly className="mt-4 h-24 w-full rounded-xl border p-3 text-xs" /></div></Modal>;
+}
+
+function HistoryModal({ T, history, tools, onClose, onPrint }) {
+  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[760px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły / kto komu</th><th className="p-3">Użytkownik</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); return <tr key={h.id} className="border-t odd:bg-zinc-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{tool?.name || ""}</td><td className="p-3">{h.toolId}<br />SN: {tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3">{h.details}</td><td className="p-3">{h.user}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div></div></Modal>;
 }
 
 function ClaimModal({ T, initialCode, onClose, onClaim }) {
