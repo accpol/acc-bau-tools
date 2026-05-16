@@ -525,12 +525,14 @@ export default function App() {
       const [toolsRes, settingsRes, historyRes] = await Promise.all([
         supabase.from("tools").select("id,data").order("id"),
         supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
-        supabase.from("history").select("id,data").order("created_at", { ascending: false }),
+        supabase.from("history").select("id,data"),
       ]);
 
       let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean);
       let loadedSettings = settingsRes.data?.data || null;
-      let loadedHistory = (historyRes.data || []).map((row) => ({ id: row.id, ...(row.data || {}) }));
+      let loadedHistory = (historyRes.data || [])
+        .map((row) => ({ id: row.id, ...(row.data || {}) }))
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
       if (!loadedSettings) {
         await supabase.from("settings").upsert({ id: "main", data: defaultSettings });
@@ -610,12 +612,49 @@ export default function App() {
   };
 
   async function log(tool, action, details, extra = {}) {
-    const item = { id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details, photosFromGiver: [], photosFromReceiver: [], ...extra };
-    setHistory((prev) => [item, ...prev]);
+    const item = {
+      id: crypto.randomUUID?.() || String(Date.now()),
+      toolId: tool.id,
+      toolName: tool.name || "",
+      serial: tool.serial || "",
+      date: new Date().toLocaleString("pl-PL"),
+      user,
+      action,
+      details,
+      from: extra.from || "",
+      to: extra.to || "",
+      photosFromGiver: [],
+      photosFromReceiver: [],
+      ...extra,
+    };
+
+    setHistory((prev) => [item, ...prev.filter((h) => h.id !== item.id)]);
+
     if (supabase) {
-      await supabase.from("history").insert({ id: item.id, data: item });
+      const { error } = await supabase.from("history").upsert({ id: item.id, data: item });
+      if (error) console.error("history save error", error);
     }
+
     return item;
+  }
+
+  async function saveHistoryItem(item) {
+    const normalized = {
+      ...item,
+      toolName: item.toolName || tools.find((t) => t.id === item.toolId)?.name || "",
+      serial: item.serial || tools.find((t) => t.id === item.toolId)?.serial || "",
+      photosFromGiver: item.photosFromGiver || [],
+      photosFromReceiver: item.photosFromReceiver || [],
+    };
+
+    setHistory((prev) => [normalized, ...prev.filter((h) => h.id !== normalized.id)]);
+
+    if (supabase) {
+      const { error } = await supabase.from("history").upsert({ id: normalized.id, data: normalized });
+      if (error) console.error("history upsert error", error);
+    }
+
+    return normalized;
   }
 
   function login(name, pin) {
@@ -655,11 +694,11 @@ export default function App() {
     setShowToolForm(false);
   }
 
-  async function updateTool(tool, action, details) {
+  async function updateTool(tool, action, details, options = {}) {
     setTools((prev) => prev.map((t) => (t.id === tool.id ? tool : t)));
     setSelected(tool);
     if (supabase) await supabase.from("tools").upsert({ id: tool.id, data: tool });
-    log(tool, action, details);
+    if (!options.skipHistory) await log(tool, action, details, options.historyExtra || {});
   }
 
   function addInspection(inspection) {
@@ -673,8 +712,23 @@ export default function App() {
   async function createTransfer() {
     if (!selected) return;
     if (selected.assignedTo && selected.assignedTo !== user) return alert(`Nie możesz przekazać. Sprzęt przypisany do: ${selected.assignedTo}`);
-    const historyItem = await log(selected, T.transferCode, `Kod przekazania wystawił: ${user}`, { transferStatus: "created", from: user, to: "" });
-    const ticket = { id: crypto.randomUUID?.() || String(Date.now()), historyId: historyItem.id, toolId: selected.id, toolName: selected.name, from: user, time: new Date().toISOString() };
+
+    const fromName = user;
+    const historyItem = await log(selected, "Przekazanie - kod utworzony", `${fromName} ➜ oczekuje na odbiorcę`, {
+      transferStatus: "created",
+      from: fromName,
+      to: "",
+    });
+
+    const ticket = {
+      id: crypto.randomUUID?.() || String(Date.now()),
+      historyId: historyItem.id,
+      toolId: selected.id,
+      toolName: selected.name,
+      from: fromName,
+      time: new Date().toISOString(),
+    };
+
     const code = encodeTicket(ticket);
     setTransferCode(code);
     setShowTransfer(true);
@@ -685,22 +739,52 @@ export default function App() {
   async function claimTransfer(code) {
     const ticket = decodeTicket(code.trim());
     if (!ticket) return alert("Zły kod przekazania");
+
     const tool = tools.find((t) => t.id === ticket.toolId);
     if (!tool) return alert("Nie znaleziono narzędzia");
     if (ticket.from === user) return alert("Nie możesz przejąć od siebie");
     if (tool.assignedTo && tool.assignedTo !== ticket.from) return alert(`Nie można przejąć. Aktualnie: ${tool.assignedTo}`);
-    const updated = { ...tool, status: "Wydane", assignedTo: user };
-    await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`);
 
-    if (ticket.historyId) {
-      const nextHistory = history.map((h) => h.id === ticket.historyId ? { ...h, transferStatus: "claimed", to: user, details: `${ticket.from} ➜ ${user}` } : h);
-      setHistory(nextHistory);
-      const updatedHistory = nextHistory.find((h) => h.id === ticket.historyId);
-      if (supabase && updatedHistory) await supabase.from("history").upsert({ id: updatedHistory.id, data: updatedHistory });
-      setPhotoContext({ historyId: ticket.historyId, historyItem: updatedHistory, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
-      setShowPhotoModal(true);
+    const updated = { ...tool, status: "Wydane", assignedTo: user };
+    await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`, { skipHistory: true });
+
+    let baseHistory = history.find((h) => h.id === ticket.historyId);
+
+    if (!baseHistory && supabase && ticket.historyId) {
+      const { data } = await supabase.from("history").select("id,data").eq("id", ticket.historyId).maybeSingle();
+      if (data?.data) baseHistory = { id: data.id, ...data.data };
     }
 
+    if (!baseHistory) {
+      baseHistory = {
+        id: ticket.historyId || crypto.randomUUID?.() || String(Date.now()),
+        toolId: tool.id,
+        toolName: tool.name,
+        serial: tool.serial || "",
+        date: new Date().toLocaleString("pl-PL"),
+        user: ticket.from,
+        action: "Przekazanie",
+        details: `${ticket.from} ➜ ${user}`,
+        from: ticket.from,
+        to: user,
+        transferStatus: "claimed",
+        photosFromGiver: [],
+        photosFromReceiver: [],
+      };
+    }
+
+    const updatedHistory = await saveHistoryItem({
+      ...baseHistory,
+      action: "Przekazanie",
+      details: `${ticket.from} ➜ ${user}`,
+      from: ticket.from,
+      to: user,
+      transferStatus: "claimed",
+      claimedAt: new Date().toLocaleString("pl-PL"),
+    });
+
+    setPhotoContext({ historyId: updatedHistory.id, historyItem: updatedHistory, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+    setShowPhotoModal(true);
     setShowClaim(false);
     setTransferCode("");
   }
@@ -714,17 +798,20 @@ export default function App() {
     const rows = list.map((h) => {
       const tool = tools.find((t) => t.id === h.toolId);
       return {
-        date: h.date,
-        toolId: h.toolId,
-        toolName: tool?.name || "",
-        serial: tool?.serial || "",
-        action: h.action,
-        details: h.details,
-        user: h.user,
+        date: h.date || "",
+        toolId: h.toolId || "",
+        toolName: h.toolName || tool?.name || "",
+        serial: h.serial || tool?.serial || "",
+        action: h.action || "",
+        details: h.details || "",
+        from: h.from || "",
+        to: h.to || "",
+        user: h.user || "",
+        photos: (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0),
       };
     });
 
-    const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">Wydruk: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Data</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Urządzenie</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Akcja</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Szczegóły / kto komu</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Użytkownik</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${r.action}</td><td style="border:1px solid #ccc;padding:7px">${r.details}</td><td style="border:1px solid #ccc;padding:7px">${r.user}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
+    const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">Wydruk: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Data</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Urządzenie</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Akcja</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Od</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Do</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Szczegóły</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Zdjęcia</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${r.action}</td><td style="border:1px solid #ccc;padding:7px">${r.from || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.to || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.details}</td><td style="border:1px solid #ccc;padding:7px">${r.photos}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
     w.document.write(html);
     w.document.close();
@@ -1181,7 +1268,7 @@ function TransferModal({ T, code, tool, onClose }) {
 }
 
 function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
-  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[820px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły / kto komu</th><th className="p-3">Zdjęcia</th><th className="p-3">Użytkownik</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3">{h.details}</td><td className="p-3 font-bold">{photoCount ? `${photoCount} zdjęć` : "—"}</td><td className="p-3">{h.user}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">Kliknij wpis historii, aby zobaczyć zdjęcia przekazującego i odbierającego.</p></div></Modal>;
+  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Od</th><th className="p-3">Do</th><th className="p-3">Szczegóły</th><th className="p-3">Zdjęcia</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{h.details}</td><td className="p-3 font-bold">{photoCount ? `${photoCount} zdjęć` : "—"}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">Kliknij wpis historii, aby zobaczyć zdjęcia przekazującego i odbierającego.</p></div></Modal>;
 }
 
 function HistoryDetailModal({ T, item, tool, onClose }) {
