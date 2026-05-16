@@ -759,7 +759,7 @@ export default function App() {
   if (!user) return <LoginScreen settings={settings} T={T} lang={lang} setLang={setLang} onLogin={login} />;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.18),transparent_32%),linear-gradient(135deg,#09090b_0%,#18181b_42%,#27272a_100%)] text-zinc-950">
+    <div className="min-h-screen text-zinc-950">
       {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">Ładowanie bazy danych...</div></div></div>}
       {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">Uwaga: brak połączenia z Supabase. Aplikacja działa lokalnie.</div></div>}
       <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
@@ -836,24 +836,30 @@ export default function App() {
   );
 }
 
+function LogoMark({ small = false }) {
+  return (
+    <div className={`relative shrink-0 ${small ? "h-14 w-28" : "h-20 w-40"}`}>
+      <dift-0 top-0 leading-none tracking-tight text-zinc-900">
+        <div className={`${small ? "text-2xl" : "text-4xl"} font-black`}>ACC</div>
+        <div className={`${small ? "-mt-1 text-2xl" : "-mt-2 text-4xl"} font-black`}>BAU</div>
+      </div>
+      <div className={`absolute rounded-full bg-orange-500 shadow-lg ${small ? "right-2 top-3 h-8 w-8" : "right-3 top-5 h-11 w-11"}`} />
+    </div>
+  );
+}
+
 function LanguageSelect({ lang, setLang, dark = false }) {
   return (
     <select value={lang} onChange={(e) => setLang(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm font-bold outline-none ${dark ? "border-white/20 bg-white/10 text-white" : "border-zinc-200 bg-white text-zinc-950"}`}>
       <option className="text-zinc-950" value="pl">🇵🇱 PL</option>
-      <option className="text-zinc-950" value="en">🇬🇧 EN</option>
-      <option className="text-zinc-950" value="de">🇩🇪 DE</option>
-    </select>
-  );
-}
-
-function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHistory, onExcel, onSettings, onDemo, onAdd }) {
+      <option className="text-zinc-950" value="e<LogoMark small />, onClaim, onHistory, onExcel, onSettings, onDemo, onAdd }) {
   return (
-    <header className="border-b border-white/10 bg-zinc-950/95 text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-600 shadow-xl"><Hammer className="h-7 w-7" /></div>
+    <header className="border-b border-white/10 bg-[#30312f]/95 text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
+      <div clas fex-row lg:items-center lg:justify-between">
+        <div clasms-center gap-3">
+          <LogoMark small />
           <div>
-            <div className="mb-1 inline-flex rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-300">ACC BAU • TOOL CONTROL</div>
+            <div className="mb-1 inline-flex rounded-full border border-orange-400/30 bg-orange-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">ACC BAU • TOOL CONTROL</div>
             <h1 className="text-2xl font-black tracking-tight">{T.appTitle}</h1>
             <p className="text-sm text-zinc-300">{T.subtitle}</p>
           </div>
@@ -864,26 +870,16 @@ function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHi
           <Button onClick={onClaim} className="rounded-xl bg-emerald-500 text-white shadow-lg hover:bg-emerald-600"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button>
           <Button onClick={onHistory} className="rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><History className="mr-2 h-4 w-4" /> {T.history}</Button>
           {isAdmin && <Button onClick={onExcel} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><FileSpreadsheet className="mr-2 h-4 w-4" /> {T.excel}</Button>}
-          {isAdmin && <Button onClick={onSettings} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">{T.settings}</Button>}
-          {isAdmin && <Button onClick={onDemo} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><RotateCcw className="mr-2 h-4 w-4" /> {T.demo}</Button>}
-          {isAdmin && <Button onClick={onAdd} className="rounded-xl bg-yellow-500 text-zinc-950 shadow-lg hover:bg-yellow-400"><Plus className="mr-2 h-4 w-4" /> {T.add}</Button>}
-          <Button onClick={onLogout} className="rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><LogOut className="mr-2 h-4 w-4" /> {T.logout}</Button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function LoginScreen({ settings, T, lang, setLang, onLogin }) {
+          {isAdmin && <Button onClick={onSettings} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">{T.settings}</Buttoame="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100"><RotateCcw className="mr-2 h-4 w-4" /> {T.demo}</Button>}
+          {isAdmin && <Button onClick={onAdd} className="rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-500"><Plus className="mr-2 h-4 w-4" /> {T.add}</Button>}
+          <Button onClick={onLogout} className="rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><LogOut className="mr-2 h-4 w-4" /> {T.loLogin }) {
   const [name, setName] = useState(settings.people[0] || "");
   const [pin, setPin] = useState("");
-  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.22),transparent_35%),linear-gradient(135deg,#09090b,#18181b)] p-4 text-white"><div className="mx-auto flex min-h-[80vh] max-w-4xl items-center justify-center"><Card className="grid w-full overflow-hidden rounded-[32px] border border-white/10 shadow-2xl lg:grid-cols-2"><div className="bg-zinc-950 p-8 text-white"><div className="mb-6 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-600"><Hammer className="h-8 w-8" /></div><h1 className="text-4xl font-black">{T.appTitle}</h1><p className="mt-4 text-zinc-300">{T.loginText}</p><div className="mt-6"><LanguageSelect lang={lang} setLang={setLang} dark /></div></div><CardContent className="p-8 text-zinc-950"><div className="mb-5 flex items-center gap-2 text-xl font-black"><Lock className="h-5 w-5" /> {T.login}</div><select value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border px-4 py-3">{settings.people.map((p) => <option key={p}>{p}</option>)}</select><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" className="mt-4 w-full rounded-2xl border px-4 py-3" /><Button onClick={() => onLogin(name, pin)} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base hover:bg-zinc-800">{T.enter}</Button><p className="mt-4 text-xs text-zinc-400">{T.demoPin}</p></CardContent></Card></div></div>;
+  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.24),transparent_35%),linear-gradient(135deg,#2f302d,#575951)] p-4 text-white"><div className="mx-auto flex min-h-[80vh] max-w-4xl items-center justify-center"><Card className="grid w-full overflow-hidden rounded-[32px] border border-white/10 shadow-2xl lg:grid-cols-2"><div className="bggoMark /><h1 className="text-4xl font-black">{T.appTitle}</h1><p className="mt-4 text-zinc-300">{T.loginText}</p><div className="mt-6"><LanguageSelect lang={lang} setLang={setLang} dark /></div></div><CardContent className="p-8 text-zinc-950"><div className="mb-5 flex items-center gap-2 text-xl font-black"><Lock className="h-5 w-5" /> {T.login}</div><select value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border px-4 py-3">{settings.people.map((p) => <option key={p}>{p}</option>)}</select><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" className="mt-4 w-full rounded-2xl border px-4 py-3" /><Button onClick={() => onLogin(name, pin)} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base hover:bg-zinc-800">{T.enter}</Button><p className="mt-4 text-xs text-zinc-400">{T.demoPin}</p></CardContent></Card></div></div>;
 }
 
 function PublicToolView({ tool, T, lang, setLang, onBack }) {
-  if (!tool) return <div className="min-h-screen bg-zinc-950 p-6 text-white"><Card className="mx-auto max-w-3xl rounded-3xl"><CardContent className="p-6"><h1 className="text-2xl font-black">ACC Bau • {T.publicInfo}</h1><p className="mt-3 text-red-600">{T.noToolFound}</p><Button onClick={onBack} className="mt-5">{T.back}</Button></CardContent></Card></div>;
-  const state = inspectionStatus(tool, T);
-  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.2),transparent_35%),linear-gradient(135deg,#09090b,#18181b)] p-4 text-white"><div className="mx-auto max-w-4xl overflow-hidden rounded-[32px] bg-white text-zinc-950 shadow-2xl"><div className="bg-zinc-950 p-6 text-white"><div className="flex items-center justify-between gap-3"><div className="inline-flex rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-black uppercase text-yellow-300">{T.publicTitle}</div><LanguageSelect lang={lang} setLang={setLang} dark /></div><h1 className="mt-4 text-4xl font-black">{tool.name}</h1><p className="mt-2 text-zinc-300">{T.publicSubtitle}</p></div><div className="grid gap-4 p-5 sm:grid-cols-2"><Info label={T.equipmentId} value={tool.id} /><Info label={T.serial} value={tool.serial || "—"} /><Info label={T.brandModel} value={`${tool.brand || "—"} ${tool.model || ""}`} /><Info label={T.category} value={tool.category || "—"} /><Info label={T.status} value={tool.status || "—"} /><Info label={T.location} value={`${tool.project || "—"} / ${tool.location || "—"}`} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><div className={`rounded-2xl border px-4 py-3 ${state.cls}`}><p className="text-xs font-semibold">{T.safetyInspectionStatus}</p><p className="text-lg font-black">{state.label}</p></div></div><div className="px-5 pb-6"><h2 className="mb-3 text-lg font-black">{T.testsInspections}</h2><div className="grid gap-3 sm:grid-cols-2">{inspections(tool).length ? inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />) : <div className="rounded-2xl border bg-red-50 p-4 text-red-700">{T.noInspections}</div>}</div><div className="mt-5 rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-600"><b>{T.notes}:</b><br />{tool.notes || "—"}</div></div></div></div>;
+  if (!tool) return <div className="min-h-screen bg-zinc-950 p-6 text-white"><Card className="mx-auto max-w-3xl rounded-3xl"><CardContent className="p-6"><h1 className="text-2xl font-black">ACC Bau • {T.publicInfo}</h1><p className="mt-3 text-red-600">{T.noToolFound}</p><Button onClick={onBrn <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.2),transparent_35%),linear-gradient(135deg,#09090b,#18181b)] p-4 text-white"><div className="mx-auto max-w-4xl overflow-hidden rounded-[32px] bg-white text-zinc-950 shadow-2xl"><div className="bg-zinc-950 p-6 text-white"><div className="flex items-center justify-between gap-3"><div className="inline-flex rounded-full border border-orange-400/30 bg-orange-500/10 px-3 py-1 text-xs font-black uppercase text-orange-300">{T.publicTitle}</div><LanguageSelect l/di="mt-4 text-4xl font-black">{tool.name}</h1><p className="mt-2 text-zinc-300">{T.publicSubtitle}</p></div><div className="grid gap-4 p-5 sm:grid-cols-2"><Info label={T.equipmentId} value={tool.id} /><Info label={T.serial} value={tool.serial || "—"} /><Info label={T.brandModel} value={`${tool.brand || "—"} ${tool.model || ""}`} /><Info label={T.category} value={tool.category || "—"} /><Info label={T.status} value={tool.status || "—"} /><Info label={T.location} value={`${tool.project || "—"} / ${tool.location || "—"}`} /><Info label={T.assignedTo} value={tool.assignedTo || T.warehouse} /><div className={`rounded-2xl border px-4 py-3 ${state.cls}`}><p className="text-xs font-semibold">{T.safetyInspectionStatus}</p><p className="text-lg font-black">{state.label}</p></div></div><div className="px-5 pb-6"><h2 className="mb-3 text-lg font-black">{T.testsInspections}</h2><div className="grid gap-3 sm:grid-cols-2">{inspections(tool).length ? inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />) : <div className="rounded-2xl border bg-red-50 p-4 text-red-700">{T.noInspections}</div>}</div><div className="mt-5 rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-600"><b>{T.notes}:</b><br />{tool.notes || "—"}</div></div></div></div>;
 }
 
 function ToolRow({ tool, active, onClick, T }) {
