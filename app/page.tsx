@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -831,7 +831,87 @@ function TransferModal({ T, code, tool, onClose }) {
 
 function ClaimModal({ T, initialCode, onClose, onClaim }) {
   const [code, setCode] = useState(initialCode || "");
-  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={onClose} /><div className="p-6"><textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} /><div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div></div></Modal>;
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  async function startScanner() {
+    setScanError("");
+
+    if (typeof window === "undefined" || !("BarcodeDetector" in window)) {
+      setScanError("Ten telefon/przeglądarka nie wspiera automatycznego skanowania QR. Użyj Chrome na Androidzie albo wklej kod ręcznie.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setScanning(true);
+
+      setTimeout(async () => {
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        scanLoop();
+      }, 200);
+    } catch (e) {
+      setScanError("Nie udało się otworzyć aparatu. Sprawdź, czy strona ma zgodę na kamerę i czy działa przez HTTPS albo localhost.");
+    }
+  }
+
+  async function scanLoop() {
+    if (!videoRef.current || !streamRef.current) return;
+
+    try {
+      const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      const codes = await detector.detect(videoRef.current);
+
+      if (codes && codes.length) {
+        const value = codes[0].rawValue || "";
+        stopScanner();
+
+        const url = new URL(value, window.location.href);
+        const transfer = url.searchParams.get("transfer");
+        const finalCode = transfer || value;
+
+        setCode(finalCode);
+        onClaim(finalCode);
+        return;
+      }
+    } catch (e) {}
+
+    requestAnimationFrame(scanLoop);
+  }
+
+  function stopScanner() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setScanning(false);
+  }
+
+  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={() => { stopScanner(); onClose(); }} /><div className="p-6">
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <Button onClick={startScanner} className="w-full rounded-2xl bg-emerald-600 py-6 text-base font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-5 w-5" /> Otwórz aparat i skanuj QR</Button>
+        {scanning && <div className="mt-4 overflow-hidden rounded-3xl border bg-black p-2"><video ref={videoRef} className="h-72 w-full rounded-2xl object-cover" playsInline muted /></div>}
+        {scanning && <Button onClick={stopScanner} variant="outline" className="mt-3 w-full rounded-2xl">Zamknij aparat</Button>}
+        {scanError && <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{scanError}</div>}
+      </div>
+
+      <div>
+        <textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} />
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div>
+        <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => { stopScanner(); onClose(); }}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div>
+      </div>
+    </div>
+  </div></Modal>;
 }
 
 function Modal({ children, wide }) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className={`max-h-[92vh] w-full overflow-auto rounded-3xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-3xl"}`}>{children}</motion.div></div>; }
