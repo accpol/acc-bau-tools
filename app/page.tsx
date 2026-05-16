@@ -121,7 +121,7 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addMonths(date, months) {
+function addMonths(date: string, months: number) {
   const d = new Date(date || today());
   d.setMonth(d.getMonth() + months);
   return d.toISOString().slice(0, 10);
