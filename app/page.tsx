@@ -1282,14 +1282,23 @@ function PhotoGallery({ title, photos }) {
 function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
+  const cameraRef = useRef(null);
+  const uploadRef = useRef(null);
   const field = context.mode === "giver" ? "photosFromGiver" : "photosFromReceiver";
 
   function addPhotos(files) {
-    Array.from(files || []).slice(0, 6).forEach((file) => {
+    const selectedFiles = Array.from(files || []).slice(0, 6);
+    selectedFiles.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = () => setPhotos((prev) => [...prev, String(reader.result || "")]);
+      reader.onload = () => {
+        setPhotos((prev) => [...prev, String(reader.result || "")]);
+      };
       reader.readAsDataURL(file);
     });
+  }
+
+  function removePhoto(index) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function save() {
@@ -1301,6 +1310,8 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
       currentItem = {
         id: context.historyId || crypto.randomUUID?.() || String(Date.now()),
         toolId: context.tool?.id || "",
+        toolName: context.tool?.name || "",
+        serial: context.tool?.serial || "",
         date: new Date().toLocaleString("pl-PL"),
         user: context.mode === "giver" ? context.tool?.assignedTo || "" : "",
         action: context.mode === "giver" ? "Kod przekazania" : "Przejęcie",
@@ -1330,7 +1341,83 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
     onClose();
   }
 
-  return <Modal><ModalHeader title={context.title} subtitle={context.tool?.name} onClose={onClose} /><div className="p-6"><input type="file" accept="image/*" multiple capture="environment" onChange={(e) => addPhotos(e.target.files)} className="w-full rounded-2xl border p-3" /><div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Zdjęcia zapiszą się w historii tego konkretnego przekazania. Potem kliknij wpis w historii, aby je zobaczyć.</div><div className="mt-4 grid gap-3 sm:grid-cols-3">{photos.map((p, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-white p-2"><img src={p} className="h-32 w-full rounded-xl object-cover" /></div>)}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Pomiń</Button><Button disabled={saving} onClick={save} className="bg-zinc-950 hover:bg-zinc-800">{saving ? "Zapisywanie..." : "Zapisz zdjęcia"}</Button></div></div></Modal>;
+  return (
+    <Modal>
+      <ModalHeader title={context.title} subtitle={context.tool?.name} onClose={onClose} />
+
+      <div className="p-6">
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          onChange={(e) => addPhotos(e.target.files)}
+          className="hidden"
+        />
+
+        <input
+          ref={uploadRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => addPhotos(e.target.files)}
+          className="hidden"
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button
+            type="button"
+            onClick={() => cameraRef.current?.click()}
+            className="rounded-2xl bg-emerald-600 py-6 text-base font-black hover:bg-emerald-700"
+          >
+            📷 Dodaj zdjęcie / zrób aparatem
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => uploadRef.current?.click()}
+            className="rounded-2xl py-6 text-base font-black"
+          >
+            🖼️ Wgraj zdjęcie z urządzenia
+          </Button>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Zdjęcia zapiszą się w historii tego konkretnego przekazania.
+        </div>
+
+        {photos.length > 0 ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {photos.map((p, i) => (
+              <div key={i} className="relative overflow-hidden rounded-2xl border bg-white p-2 shadow-sm">
+                <img src={p} className="h-32 w-full rounded-xl object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-1 text-xs font-bold text-white shadow"
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
+            Nie dodano jeszcze żadnych zdjęć.
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>Pomiń</Button>
+          <Button type="button" disabled={saving || !photos.length} onClick={save} className="bg-zinc-950 hover:bg-zinc-800">
+            {saving ? "Zapisywanie..." : "Zapisz zdjęcia"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 function ClaimModal({ T, initialCode, onClose, onClaim }) {
