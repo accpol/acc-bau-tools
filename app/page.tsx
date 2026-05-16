@@ -838,7 +838,7 @@ export default function App() {
 
 function LogoMark({ small = false }) {
   return (
-    <div className={`relative shrink-0 ${small ? "h-14 w-28" : "h-20 w-40"}`}>
+   <div className={`relative shrink-0 ${small ? "h-14 w-28" : "h-20 w-40"}`}>
       <dift-0 top-0 leading-none tracking-tight text-zinc-900">
         <div className={`${small ? "text-2xl" : "text-4xl"} font-black`}>ACC</div>
         <div className={`${small ? "-mt-1 text-2xl" : "-mt-2 text-4xl"} font-black`}>BAU</div>
