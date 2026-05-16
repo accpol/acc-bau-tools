@@ -30,11 +30,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const STORAGE_KEY = "acc_tools_v6";
-const HISTORY_KEY = "acc_history_v6";
-const SETTINGS_KEY = "acc_settings_v6";
-const USER_KEY = "acc_user_v6";
-const LANG_KEY = "acc_lang_v6";
+const STORAGE_KEY = "acc_tools_v7";
+const HISTORY_KEY = "acc_history_v7";
+const SETTINGS_KEY = "acc_settings_v7";
+const USER_KEY = "acc_user_v7";
+const LANG_KEY = "acc_lang_v7";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -502,7 +502,7 @@ export default function App() {
     }
 
     if (!supabase) {
-      const t = load(STORAGE_KEY, defaultTools);
+      const t = load(STORAGE_KEY, []);
       const s = load(SETTINGS_KEY, defaultSettings);
       const h = load(HISTORY_KEY, []);
       setTools(t);
@@ -531,9 +531,10 @@ export default function App() {
         loadedSettings = defaultSettings;
       }
 
+      // Nie dodajemy automatycznie demo-narzędzi, gdy baza jest pusta.
+      // Inaczej po usunięciu wszystkich narzędzi wracałyby po odświeżeniu.
       if (!loadedTools.length) {
-        await supabase.from("tools").upsert(defaultTools.map((tool) => ({ id: tool.id, data: tool })));
-        loadedTools = defaultTools;
+        loadedTools = [];
       }
 
       setTools(loadedTools);
@@ -544,13 +545,10 @@ export default function App() {
       setDbLoaded(true);
     } catch (e) {
       console.error(e);
-      const t = load(STORAGE_KEY, defaultTools);
-      const s = load(SETTINGS_KEY, defaultSettings);
-      const h = load(HISTORY_KEY, []);
-      setTools(t);
-      setSettings(s);
-      setHistory(h);
-      setSelected(t[0] || null);
+      setTools([]);
+      setSettings(defaultSettings);
+      setHistory([]);
+      setSelected(null);
       setDbStatus("error");
       setDbLoaded(true);
     }
@@ -807,7 +805,22 @@ export default function App() {
           </Card>
 
           <aside className="space-y-5">
-            {selected && <ToolDetails T={T} tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={async () => { if (!isAdmin) return alert(T.noPermission); setTools((prev) => prev.filter((t) => t.id !== selected.id)); setSelected(tools[0] || null); if (supabase) await supabase.from("tools").delete().eq("id", selected.id); }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} />}
+            {selected && <ToolDetails T={T} tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={async () => {
+                if (!isAdmin) return alert(T.noPermission);
+                if (!confirm(`Usunąć narzędzie: ${selected.name}?`)) return;
+                const deletedId = selected.id;
+                const nextTools = tools.filter((t) => t.id !== deletedId);
+                setTools(nextTools);
+                setSelected(nextTools[0] || null);
+                if (supabase) {
+                  const { error } = await supabase.from("tools").delete().eq("id", deletedId);
+                  if (error) {
+                    alert("Nie udało się usunąć z Supabase: " + error.message);
+                    await initApp();
+                    return;
+                  }
+                }
+              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} />}
             <InfoBox T={T} />
           </aside>
         </section>
