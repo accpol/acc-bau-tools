@@ -478,6 +478,9 @@ export default function App() {
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoContext, setPhotoContext] = useState(null);
+  const [selectedHistory, setSelectedHistory] = useState(null);
   const [transferCode, setTransferCode] = useState("");
   const [publicToolId, setPublicToolId] = useState("");
   const [dbLoaded, setDbLoaded] = useState(false);
@@ -606,12 +609,13 @@ export default function App() {
     danger: tools.filter((t) => inspectionStatus(t, T).danger).length,
   };
 
-  async function log(tool, action, details) {
-    const item = { id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details };
+  async function log(tool, action, details, extra = {}) {
+    const item = { id: crypto.randomUUID?.() || String(Date.now()), toolId: tool.id, date: new Date().toLocaleString("pl-PL"), user, action, details, photosFromGiver: [], photosFromReceiver: [], ...extra };
     setHistory((prev) => [item, ...prev]);
     if (supabase) {
       await supabase.from("history").insert({ id: item.id, data: item });
     }
+    return item;
   }
 
   function login(name, pin) {
@@ -666,17 +670,19 @@ export default function App() {
     setShowInspection(false);
   }
 
-  function createTransfer() {
+  async function createTransfer() {
     if (!selected) return;
     if (selected.assignedTo && selected.assignedTo !== user) return alert(`Nie możesz przekazać. Sprzęt przypisany do: ${selected.assignedTo}`);
-    const ticket = { id: crypto.randomUUID?.() || String(Date.now()), toolId: selected.id, toolName: selected.name, from: user, time: new Date().toISOString() };
+    const historyItem = await log(selected, T.transferCode, `Kod przekazania wystawił: ${user}`, { transferStatus: "created", from: user, to: "" });
+    const ticket = { id: crypto.randomUUID?.() || String(Date.now()), historyId: historyItem.id, toolId: selected.id, toolName: selected.name, from: user, time: new Date().toISOString() };
     const code = encodeTicket(ticket);
     setTransferCode(code);
     setShowTransfer(true);
-    log(selected, T.transferCode, `Wystawił: ${user}`);
+    setPhotoContext({ historyId: historyItem.id, mode: "giver", tool: selected, title: "Przekazałeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+    setShowPhotoModal(true);
   }
 
-  function claimTransfer(code) {
+  async function claimTransfer(code) {
     const ticket = decodeTicket(code.trim());
     if (!ticket) return alert("Zły kod przekazania");
     const tool = tools.find((t) => t.id === ticket.toolId);
@@ -684,7 +690,17 @@ export default function App() {
     if (ticket.from === user) return alert("Nie możesz przejąć od siebie");
     if (tool.assignedTo && tool.assignedTo !== ticket.from) return alert(`Nie można przejąć. Aktualnie: ${tool.assignedTo}`);
     const updated = { ...tool, status: "Wydane", assignedTo: user };
-    updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`);
+    await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`);
+
+    if (ticket.historyId) {
+      const nextHistory = history.map((h) => h.id === ticket.historyId ? { ...h, transferStatus: "claimed", to: user, details: `${ticket.from} ➜ ${user}` } : h);
+      setHistory(nextHistory);
+      const updatedHistory = nextHistory.find((h) => h.id === ticket.historyId);
+      if (supabase && updatedHistory) await supabase.from("history").upsert({ id: updatedHistory.id, data: updatedHistory });
+      setPhotoContext({ historyId: ticket.historyId, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+      setShowPhotoModal(true);
+    }
+
     setShowClaim(false);
     setTransferCode("");
   }
@@ -834,7 +850,9 @@ export default function App() {
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} />}
       {showTransfer && selected && <TransferModal T={T} code={transferCode} tool={selected} onClose={() => setShowTransfer(false)} />}
       {showClaim && <ClaimModal T={T} initialCode={transferCode} onClose={() => setShowClaim(false)} onClaim={claimTransfer} />}
-      {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} />}
+      {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} onOpen={(item) => setSelectedHistory(item)} />}
+      {selectedHistory && <HistoryDetailModal T={T} item={selectedHistory} tool={tools.find((t) => t.id === selectedHistory.toolId)} onClose={() => setSelectedHistory(null)} />}
+      {showPhotoModal && photoContext && <HandoverPhotoModal T={T} context={photoContext} history={history} setHistory={setHistory} onClose={() => { setShowPhotoModal(false); setPhotoContext(null); }} />}
     </div>
   );
 }
@@ -857,12 +875,14 @@ function LanguageSelect({ lang, setLang, dark = false }) {
       value={lang}
       onChange={(e) => setLang(e.target.value)}
       className={`rounded-xl border px-3 py-2 text-sm font-bold outline-none ${
-        dark ? "border-white/20 bg-white/10 text-white" : "border-zinc-200 bg-white text-zinc-950"
+        dark
+          ? "border-white/20 bg-white/10 text-white"
+          : "border-zinc-200 bg-white text-zinc-950"
       }`}
     >
-      <option className="text-zinc-950" value="pl">🇵🇱 Polski</option>
-      <option className="text-zinc-950" value="en">🇬🇧 English</option>
-      <option className="text-zinc-950" value="de">🇩🇪 Deutsch</option>
+      <option value="pl">🇵🇱 Polski</option>
+      <option value="en">🇬🇧 English</option>
+      <option value="de">🇩🇪 Deutsch</option>
     </select>
   );
 }
@@ -1160,8 +1180,42 @@ function TransferModal({ T, code, tool, onClose }) {
   return <Modal><ModalHeader title={T.transferCode} subtitle={T.transferCodeSubtitle} onClose={onClose} /><div className="p-6 text-center"><p className="text-lg font-black">{tool.name}</p><p className="text-sm text-zinc-500">{tool.id}</p><img src={qrUrl(url)} alt="QR" className="mx-auto mt-5 h-64 w-64 rounded-3xl border bg-white p-3 shadow-xl" /><textarea value={code} readOnly className="mt-4 h-24 w-full rounded-xl border p-3 text-xs" /></div></Modal>;
 }
 
-function HistoryModal({ T, history, tools, onClose, onPrint }) {
-  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[760px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły / kto komu</th><th className="p-3">Użytkownik</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); return <tr key={h.id} className="border-t odd:bg-zinc-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{tool?.name || ""}</td><td className="p-3">{h.toolId}<br />SN: {tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3">{h.details}</td><td className="p-3">{h.user}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div></div></Modal>;
+function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
+  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[820px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły / kto komu</th><th className="p-3">Zdjęcia</th><th className="p-3">Użytkownik</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3">{h.details}</td><td className="p-3 font-bold">{photoCount ? `${photoCount} zdjęć` : "—"}</td><td className="p-3">{h.user}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">Kliknij wpis historii, aby zobaczyć zdjęcia przekazującego i odbierającego.</p></div></Modal>;
+}
+
+function HistoryDetailModal({ T, item, tool, onClose }) {
+  return <Modal wide><ModalHeader title="Szczegóły przekazania" subtitle={`${tool?.name || item.toolId} • ${item.date}`} onClose={onClose} /><div className="p-5"><div className="mb-5 rounded-2xl border bg-zinc-50 p-4 text-sm"><b>Akcja:</b> {item.action}<br /><b>Szczegóły:</b> {item.details}<br /><b>Użytkownik:</b> {item.user}</div><div className="grid gap-5 md:grid-cols-2"><PhotoGallery title="Zdjęcia przekazującego" photos={item.photosFromGiver || []} /><PhotoGallery title="Zdjęcia odbierającego" photos={item.photosFromReceiver || []} /></div></div></Modal>;
+}
+
+function PhotoGallery({ title, photos }) {
+  return <div><h3 className="mb-3 font-black">{title}</h3>{photos.length ? <div className="grid gap-3 sm:grid-cols-2">{photos.map((p, i) => <a key={i} href={p} target="_blank" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow"><img src={p} className="h-40 w-full rounded-xl object-cover" /></a>)}</div> : <div className="rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-500">Brak zdjęć.</div>}</div>;
+}
+
+function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
+  const [photos, setPhotos] = useState([]);
+  const field = context.mode === "giver" ? "photosFromGiver" : "photosFromReceiver";
+
+  function addPhotos(files) {
+    Array.from(files || []).slice(0, 6).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => setPhotos((prev) => [...prev, String(reader.result || "")]);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function save() {
+    const nextHistory = history.map((h) => {
+      if (h.id !== context.historyId) return h;
+      return { ...h, [field]: [...(h[field] || []), ...photos] };
+    });
+    setHistory(nextHistory);
+    const item = nextHistory.find((h) => h.id === context.historyId);
+    if (supabase && item) await supabase.from("history").upsert({ id: item.id, data: item });
+    onClose();
+  }
+
+  return <Modal><ModalHeader title={context.title} subtitle={context.tool?.name} onClose={onClose} /><div className="p-6"><input type="file" accept="image/*" multiple capture="environment" onChange={(e) => addPhotos(e.target.files)} className="w-full rounded-2xl border p-3" /><div className="mt-4 grid gap-3 sm:grid-cols-3">{photos.map((p, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-white p-2"><img src={p} className="h-32 w-full rounded-xl object-cover" /></div>)}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Pomiń</Button><Button onClick={save} className="bg-zinc-950 hover:bg-zinc-800">Zapisz zdjęcia</Button></div></div></Modal>;
 }
 
 function ClaimModal({ T, initialCode, onClose, onClaim }) {
