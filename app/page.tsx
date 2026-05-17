@@ -74,10 +74,6 @@ const I18N = {
     showTransferCode: "Pokaż kod przekazania",
     printQr: "Drukuj QR",
     addInspection: "Dodaj przegląd",
-    deleteInspection: "Usuń przegląd",
-    deleteInspectionConfirm: "Usunąć ten przegląd?",
-    deletedInspection: "Usunięto przegląd",
-    deletedInspectionDetails: "Administrator usunął błędny wpis przeglądu",
     assignedTo: "Aktualny posiadacz",
     location: "Lokalizacja",
     notes: "Uwagi",
@@ -135,7 +131,7 @@ const I18N = {
     printGenerated: "Wydruk",
     historyTitle: "Historia przekazań",
     historySubtitle: "Kto komu przekazywał, kiedy i jakie urządzenie",
-    historyClickHint: "{T.historyClickHint}",
+    historyClickHint: "Kliknij wpis historii, aby zobaczyć zdjęcia przekazującego i odbierającego.",
     date: "Data",
     equipment: "Urządzenie",
     action: "Akcja",
@@ -147,15 +143,15 @@ const I18N = {
     noPhotosShort: "brak zdjęć",
     photoOne: "zdjęcie",
     photosMany: "zdjęć",
-    clickToViewPhotos: "{T.clickToViewPhotos}",
+    clickToViewPhotos: "Kliknij, aby zobaczyć zdjęcia",
     historyDetailTitle: "Szczegóły przekazania",
     giverPhotos: "Zdjęcia przekazującego",
     receiverPhotos: "Zdjęcia odbierającego",
     noPhotos: "Brak zdjęć.",
-    addPhotoCamera: "{T.addPhotoCamera}",
-    uploadPhotoDevice: "{T.uploadPhotoDevice}",
-    photosSavedInHistory: "{T.photosSavedInHistory}",
-    noPhotosAdded: "{T.noPhotosAdded}",
+    addPhotoCamera: "📷 Dodaj zdjęcie / zrób aparatem",
+    uploadPhotoDevice: "🖼️ Wgraj zdjęcie z urządzenia",
+    photosSavedInHistory: "Zdjęcia zapiszą się w historii tego konkretnego przekazania.",
+    noPhotosAdded: "Nie dodano jeszcze żadnych zdjęć.",
     remove: "Usuń",
     skip: "Pomiń",
     savePhotos: "Zapisz zdjęcia",
@@ -181,8 +177,8 @@ const I18N = {
     toolPhoto: "Zdjęcie sprzętu",
     preview: "Podgląd",
     removePhoto: "Usuń zdjęcie",
-    loadingDb: "{T.loadingDb}",
-    supabaseOffline: "{T.supabaseOffline}",
+    loadingDb: "Ładowanie bazy danych...",
+    supabaseOffline: "Uwaga: brak połączenia z Supabase. Aplikacja działa lokalnie.",
     badTransferCode: "Zły kod przekazania",
     toolNotFound: "Nie znaleziono narzędzia",
     cannotClaimFromYourself: "Nie możesz przejąć od siebie",
@@ -190,6 +186,18 @@ const I18N = {
     openCameraScan: "Otwórz aparat i skanuj QR",
     closeCamera: "Zamknij aparat",
     scannerUnsupported: "Ten telefon/przeglądarka nie wspiera automatycznego skanowania QR. Użyj Chrome na Androidzie albo wklej kod ręcznie.",
+    serviceRepair: "Naprawa / Serwis",
+    repair: "Naprawa",
+    service: "Serwis",
+    workDone: "Co zrobiono",
+    serviceRepairHistory: "Historia przeglądów, serwisów i napraw",
+    inspectionRecord: "Przegląd",
+    serviceRecord: "Serwis / naprawa",
+    deleteInspection: "Usuń wpis",
+    confirmDeleteInspection: "Usunąć ten wpis przeglądu/serwisu?",
+    inspectionDeleted: "Usunięto wpis przeglądu/serwisu",
+    inspectionDeletedDetails: "Administrator usunął błędny wpis przeglądu/serwisu",
+    noNextDateRequired: "Brak następnego terminu — wpis serwisowy / naprawa",
     cameraError: "Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.",
   },
   en: {
@@ -226,10 +234,6 @@ const I18N = {
     showTransferCode: "Show handover QR",
     printQr: "Print QR",
     addInspection: "Add inspection",
-    deleteInspection: "Delete inspection",
-    deleteInspectionConfirm: "Delete this inspection?",
-    deletedInspection: "Inspection deleted",
-    deletedInspectionDetails: "Administrator deleted an incorrect inspection entry",
     assignedTo: "Current holder",
     location: "Location",
     notes: "Notes",
@@ -342,6 +346,18 @@ const I18N = {
     openCameraScan: "Open camera and scan QR",
     closeCamera: "Close camera",
     scannerUnsupported: "This phone/browser does not support automatic QR scanning. Use Chrome on Android or paste the code manually.",
+    serviceRepair: "Repair / Service",
+    repair: "Repair",
+    service: "Service",
+    workDone: "Work done",
+    serviceRepairHistory: "Inspection, service and repair history",
+    inspectionRecord: "Inspection",
+    serviceRecord: "Service / repair",
+    deleteInspection: "Delete entry",
+    confirmDeleteInspection: "Delete this inspection/service entry?",
+    inspectionDeleted: "Inspection/service entry deleted",
+    inspectionDeletedDetails: "Admin deleted an incorrect inspection/service entry",
+    noNextDateRequired: "No next date required — service / repair entry",
     cameraError: "Could not open camera. Check camera permission and HTTPS.",
   },
   de: {
@@ -378,10 +394,6 @@ const I18N = {
     showTransferCode: "Übergabe-QR anzeigen",
     printQr: "QR drucken",
     addInspection: "Prüfung hinzufügen",
-    deleteInspection: "Prüfung löschen",
-    deleteInspectionConfirm: "Diese Prüfung löschen?",
-    deletedInspection: "Prüfung gelöscht",
-    deletedInspectionDetails: "Administrator hat einen fehlerhaften Prüfungseintrag gelöscht",
     assignedTo: "Aktueller Besitzer",
     location: "Standort",
     notes: "Hinweise",
@@ -494,6 +506,18 @@ const I18N = {
     openCameraScan: "Kamera öffnen und QR scannen",
     closeCamera: "Kamera schließen",
     scannerUnsupported: "Dieses Telefon/dieser Browser unterstützt kein automatisches QR-Scannen. Verwenden Sie Chrome auf Android oder fügen Sie den Code manuell ein.",
+    serviceRepair: "Reparatur / Service",
+    repair: "Reparatur",
+    service: "Service",
+    workDone: "Was wurde gemacht",
+    serviceRepairHistory: "Historie der Prüfungen, Services und Reparaturen",
+    inspectionRecord: "Prüfung",
+    serviceRecord: "Service / Reparatur",
+    deleteInspection: "Eintrag löschen",
+    confirmDeleteInspection: "Diesen Prüfungs-/Serviceeintrag löschen?",
+    inspectionDeleted: "Prüfungs-/Serviceeintrag gelöscht",
+    inspectionDeletedDetails: "Admin hat einen fehlerhaften Prüfungs-/Serviceeintrag gelöscht",
+    noNextDateRequired: "Kein nächster Termin erforderlich — Service- / Reparatureintrag",
     cameraError: "Kamera konnte nicht geöffnet werden. Prüfen Sie Kameraberechtigung und HTTPS.",
   },
 };
@@ -571,7 +595,7 @@ const emptyTool = {
 };
 
 const statusOptions = ["Wszystkie", "Dostępne", "Wydane", "Do przeglądu", "Uszkodzone", "Zgubione"];
-const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Ubezpieczenie", "Inny"]; 
+const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Ubezpieczenie", "Naprawa / Serwis", "Naprawa", "Serwis", "Inny"]; 
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -671,8 +695,12 @@ function inspections(tool) {
   return Array.isArray(tool?.inspections) ? tool.inspections : [];
 }
 
+function isServiceRecord(item) {
+  return item?.kind === "service" || ["Naprawa / Serwis", "Naprawa", "Serwis"].includes(item?.type) || (!item?.nextDate && item?.doneDate);
+}
+
 function urgentInspection(tool) {
-  const list = inspections(tool);
+  const list = inspections(tool).filter((item) => !isServiceRecord(item) && item.nextDate);
   if (!list.length) return null;
   return [...list].sort((a, b) => daysUntil(a.nextDate) - daysUntil(b.nextDate))[0];
 }
@@ -965,23 +993,37 @@ export default function App() {
 
   function addInspection(inspection) {
     if (!isAdmin) return alert(T.noPermission);
-    const updated = { ...selected, inspections: [inspection, ...inspections(selected)] };
-    if (inspectionStatus(updated, T).danger && updated.status !== "Uszkodzone") updated.status = "Do przeglądu";
-    updateTool(updated, T.addInspection, `${inspection.type}: ${inspection.doneDate} / ${inspection.nextDate}`);
+    const normalized = {
+      ...inspection,
+      kind: isServiceRecord(inspection) ? "service" : "inspection",
+      result: isServiceRecord(inspection) ? (inspection.result || T.done) : inspection.result,
+      nextDate: isServiceRecord(inspection) ? "" : inspection.nextDate,
+    };
+    const updated = { ...selected, inspections: [normalized, ...inspections(selected)] };
+    if (!isServiceRecord(normalized) && inspectionStatus(updated, T).danger && updated.status !== "Uszkodzone") updated.status = "Do przeglądu";
+    const details = isServiceRecord(normalized)
+      ? `${normalized.type}: ${normalized.doneDate} — ${normalized.notes || T.noNextDateRequired}`
+      : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
+    updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details);
     setShowInspection(false);
   }
 
   function deleteInspection(inspectionId) {
     if (!isAdmin) return alert(T.noPermission);
     if (!selected) return;
-    if (!confirm(T.deleteInspectionConfirm)) return;
+    if (!confirm(T.confirmDeleteInspection)) return;
 
+    const removed = inspections(selected).find((i) => i.id === inspectionId);
     const updated = {
       ...selected,
       inspections: inspections(selected).filter((i) => i.id !== inspectionId),
     };
 
-    updateTool(updated, T.deletedInspection, T.deletedInspectionDetails);
+    updateTool(
+      updated,
+      T.inspectionDeleted,
+      removed ? `${removed.type}: ${removed.doneDate || "—"}` : T.inspectionDeletedDetails
+    );
   }
 
   async function createTransfer() {
@@ -1479,8 +1521,19 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
           {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
         </div>
 
-        <SectionTitle icon={<ClipboardList />} title={T.inspections} />
-        <div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} isAdmin={isAdmin} onDelete={() => onDeleteInspection?.(i.id)} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div>
+        <SectionTitle icon={<ClipboardList />} title={T.serviceRepairHistory || T.inspections} />
+        <div className="grid gap-3 md:grid-cols-2">
+          {inspections(tool).map((i) => (
+            <InspectionCard
+              key={i.id}
+              inspection={i}
+              T={T}
+              isAdmin={isAdmin}
+              onDelete={() => onDeleteInspection?.(i.id)}
+            />
+          ))}
+          {!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}
+        </div>
 
         <SectionTitle icon={<History />} title={T.history} />
         <div className="max-h-64 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">
@@ -1515,21 +1568,30 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 }
 
 function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
-  const d = daysUntil(inspection.nextDate);
-  const danger = d <= 30;
+  const service = isServiceRecord(inspection);
+  const d = service ? 99999 : daysUntil(inspection.nextDate);
+  const danger = !service && d <= 30;
 
   return (
-    <div className={`rounded-2xl border p-3 ${danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
+    <div className={`rounded-2xl border p-3 ${service ? "border-zinc-200 bg-zinc-50" : danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
       <div className="flex justify-between gap-2">
         <b>{inspection.type}</b>
-        {danger ? <Badge cls="bg-red-600 text-white border-red-600">{T.warning}</Badge> : <Badge cls="bg-green-100 text-green-700 border-green-200">{T.ok}</Badge>}
+        {service ? (
+          <Badge cls="bg-zinc-100 text-zinc-700 border-zinc-200">{T.serviceRecord}</Badge>
+        ) : danger ? (
+          <Badge cls="bg-red-600 text-white border-red-600">{T.warning}</Badge>
+        ) : (
+          <Badge cls="bg-green-100 text-green-700 border-green-200">{T.ok}</Badge>
+        )}
       </div>
 
       <div className="mt-2 text-xs text-zinc-600">
         {T.done}: {inspection.doneDate || "—"}<br />
-        {T.nextInspection}: {inspection.nextDate || "—"}<br />
-        {T.result}: {inspection.result || "—"}<br />
-        {inspection.notes}
+        {!service && <>{T.nextInspection}: {inspection.nextDate || "—"}<br /></>}
+        {!service && <>{T.result}: {inspection.result || "—"}<br /></>}
+        {service && <>{T.workDone}: {inspection.notes || "—"}<br /></>}
+        {!service && inspection.notes}
+        {service && <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-500">{T.noNextDateRequired}</div>}
       </div>
 
       {isAdmin && (
@@ -1558,8 +1620,46 @@ function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
 }
 
 function InspectionModal({ T, onClose, onSave }) {
-  const [i, setI] = useState({ id: crypto.randomUUID?.() || String(Date.now()), type: "DGUV/VDE", doneDate: today(), nextDate: addMonths(today(), 6), result: "OK", notes: "" });
-  return <Modal><ModalHeader title={T.addInspection} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><FormSelect label={T.type} value={i.type} options={inspectionTypes} onChange={(v) => setI({ ...i, type: v })} /><FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} /><Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} /><Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} /></Modal>;
+  const [i, setI] = useState({
+    id: crypto.randomUUID?.() || String(Date.now()),
+    kind: "inspection",
+    type: "DGUV/VDE",
+    doneDate: today(),
+    nextDate: addMonths(today(), 6),
+    result: "OK",
+    notes: "",
+  });
+
+  const service = isServiceRecord(i);
+
+  function changeType(type) {
+    const willBeService = ["Naprawa / Serwis", "Naprawa", "Serwis"].includes(type);
+    setI({
+      ...i,
+      type,
+      kind: willBeService ? "service" : "inspection",
+      nextDate: willBeService ? "" : (i.nextDate || addMonths(today(), 6)),
+      result: willBeService ? T.done : (i.result || "OK"),
+    });
+  }
+
+  return (
+    <Modal>
+      <ModalHeader title={T.addInspection} onClose={onClose} />
+      <div className="grid gap-4 p-6 md:grid-cols-2">
+        <FormSelect label={T.type} value={i.type} options={inspectionTypes} onChange={changeType} />
+        {!service && <FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} />}
+        <Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} />
+        {!service && <Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} />}
+        {service && <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">{T.noNextDateRequired}</div>}
+        <label className="block md:col-span-2">
+          <span className="mb-1 block text-xs font-bold text-zinc-500">{service ? T.workDone : T.notes}</span>
+          <textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" />
+        </label>
+      </div>
+      <ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} />
+    </Modal>
+  );
 }
 
 function SettingsModal({ T, settings, setSettings, onClose }) {
