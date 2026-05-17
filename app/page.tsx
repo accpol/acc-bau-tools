@@ -71,6 +71,10 @@ const I18N = {
     edit: "Edytuj",
     delete: "Usuń",
     returnTool: "Zwrot",
+    reportFailure: "Zgłoś awarię",
+    failureReported: "Zgłoszono awarię",
+    failureReportedDetails: "Użytkownik zgłosił awarię urządzenia",
+    failureStatus: "Awaria",
     showTransferCode: "Pokaż kod przekazania",
     printQr: "Drukuj QR",
     addInspection: "Dodaj przegląd",
@@ -238,6 +242,10 @@ const I18N = {
     edit: "Edit",
     delete: "Delete",
     returnTool: "Return",
+    reportFailure: "Report failure",
+    failureReported: "Failure reported",
+    failureReportedDetails: "User reported equipment failure",
+    failureStatus: "Failure",
     showTransferCode: "Show handover QR",
     printQr: "Print QR",
     addInspection: "Add inspection",
@@ -405,6 +413,10 @@ const I18N = {
     edit: "Bearbeiten",
     delete: "Löschen",
     returnTool: "Rückgabe",
+    reportFailure: "Störung melden",
+    failureReported: "Störung gemeldet",
+    failureReportedDetails: "Benutzer hat eine Gerätestörung gemeldet",
+    failureStatus: "Störung",
     showTransferCode: "Übergabe-QR anzeigen",
     printQr: "QR drucken",
     addInspection: "Prüfung hinzufügen",
@@ -685,7 +697,7 @@ const emptyTool = {
   inspections: [],
 };
 
-const statusOptions = ["Wszystkie", "Dostępne", "Wydane", "Do przeglądu", "Uszkodzone", "Zgubione"];
+const statusOptions = ["Wszystkie", "Dostępne", "Wydane", "Do przeglądu", "Awaria", "Uszkodzone", "Zgubione"];
 const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Ubezpieczenie", "Naprawa / Serwis", "Naprawa", "Serwis", "Inny"]; 
 
 function today() {
@@ -870,7 +882,7 @@ function inspectionStatus(tool, T = I18N.pl) {
 function badgeStatus(status) {
   if (status === "Wydane") return "bg-blue-100 text-blue-700 border-blue-200";
   if (status === "Dostępne") return "bg-green-100 text-green-700 border-green-200";
-  if (status === "Do przeglądu" || status === "Uszkodzone") return "bg-red-100 text-red-700 border-red-200";
+  if (status === "Do przeglądu" || status === "Uszkodzone" || status === "Awaria") return "bg-red-100 text-red-700 border-red-200";
   return "bg-zinc-100 text-zinc-700 border-zinc-200";
 }
 
@@ -1331,6 +1343,22 @@ export default function App() {
     updateTool({ ...selected, status: "Dostępne", assignedTo: "" }, T.returnTool, `Zwrócono do magazynu z: ${selected.assignedTo || "brak"}`);
   }
 
+  function reportFailure() {
+    if (!selected) return;
+    const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const updated = {
+      ...currentTool,
+      status: "Awaria",
+      notes: currentTool.notes || "",
+    };
+
+    updateTool(
+      updated,
+      T.failureReported || "Zgłoszono awarię",
+      `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}`
+    );
+  }
+
   function printHistory(list = history, title = T.historyTitle) {
     const rows = list.map((h) => {
       const tool = tools.find((t) => t.id === h.toolId);
@@ -1463,7 +1491,7 @@ export default function App() {
                     return;
                   }
                 }
-              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
+              }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -1703,7 +1731,7 @@ function ToolRow({ tool, active, onClick, T }) {
   );
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onReportFailure, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
   const state = inspectionStatus(tool, T);
 
   return (
@@ -1720,7 +1748,10 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         {tool.photo && <div className="mt-5 w-full max-w-[220px] overflow-hidden rounded-3xl border bg-zinc-50 p-2"><img src={tool.photo} alt={tool.name} className="h-36 w-full rounded-2xl object-cover" /></div>}
 
+        {(tool.status === "Awaria" || tool.status === "Uszkodzone") && <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700"><AlertTriangle className="mr-2 inline h-4 w-4" /> {T.failureStatus || "Awaria"}</div>}
+
         <div className="mt-5 grid gap-3 text-sm">
+          <Info label={T.status} value={tool.status || "—"} />
           <Info label={T.category} value={tool.category} />
           <Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} />
           <Info label={T.serial} value={tool.serial} />
@@ -1734,6 +1765,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button>
+          <Button onClick={onReportFailure} variant="outline" className="rounded-2xl border-red-300 text-red-700 hover:bg-red-50"><AlertTriangle className="mr-2 h-4 w-4" /> {T.reportFailure || "Zgłoś awarię"}</Button>
           {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
