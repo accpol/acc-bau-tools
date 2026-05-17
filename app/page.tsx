@@ -74,6 +74,10 @@ const I18N = {
     showTransferCode: "Pokaż kod przekazania",
     printQr: "Drukuj QR",
     addInspection: "Dodaj przegląd",
+    deleteInspection: "Usuń przegląd",
+    deleteInspectionConfirm: "Usunąć ten przegląd?",
+    deletedInspection: "Usunięto przegląd",
+    deletedInspectionDetails: "Administrator usunął błędny wpis przeglądu",
     assignedTo: "Aktualny posiadacz",
     location: "Lokalizacja",
     notes: "Uwagi",
@@ -222,6 +226,10 @@ const I18N = {
     showTransferCode: "Show handover QR",
     printQr: "Print QR",
     addInspection: "Add inspection",
+    deleteInspection: "Delete inspection",
+    deleteInspectionConfirm: "Delete this inspection?",
+    deletedInspection: "Inspection deleted",
+    deletedInspectionDetails: "Administrator deleted an incorrect inspection entry",
     assignedTo: "Current holder",
     location: "Location",
     notes: "Notes",
@@ -370,6 +378,10 @@ const I18N = {
     showTransferCode: "Übergabe-QR anzeigen",
     printQr: "QR drucken",
     addInspection: "Prüfung hinzufügen",
+    deleteInspection: "Prüfung löschen",
+    deleteInspectionConfirm: "Diese Prüfung löschen?",
+    deletedInspection: "Prüfung gelöscht",
+    deletedInspectionDetails: "Administrator hat einen fehlerhaften Prüfungseintrag gelöscht",
     assignedTo: "Aktueller Besitzer",
     location: "Standort",
     notes: "Hinweise",
@@ -959,6 +971,19 @@ export default function App() {
     setShowInspection(false);
   }
 
+  function deleteInspection(inspectionId) {
+    if (!isAdmin) return alert(T.noPermission);
+    if (!selected) return;
+    if (!confirm(T.deleteInspectionConfirm)) return;
+
+    const updated = {
+      ...selected,
+      inspections: inspections(selected).filter((i) => i.id !== inspectionId),
+    };
+
+    updateTool(updated, T.deletedInspection, T.deletedInspectionDetails);
+  }
+
   async function createTransfer() {
     if (!selected) return;
     if (selected.assignedTo && selected.assignedTo !== user) return alert(`Nie możesz przekazać. Sprzęt przypisany do: ${selected.assignedTo}`);
@@ -1176,7 +1201,7 @@ export default function App() {
                     return;
                   }
                 }
-              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
+              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -1416,7 +1441,7 @@ function ToolRow({ tool, active, onClick, T }) {
   );
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint, onPrintHistory, onOpenHistory }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
   const state = inspectionStatus(tool, T);
 
   return (
@@ -1455,7 +1480,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
         </div>
 
         <SectionTitle icon={<ClipboardList />} title={T.inspections} />
-        <div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div>
+        <div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} isAdmin={isAdmin} onDelete={() => onDeleteInspection?.(i.id)} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div>
 
         <SectionTitle icon={<History />} title={T.history} />
         <div className="max-h-64 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">
@@ -1489,10 +1514,31 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
   );
 }
 
-function InspectionCard({ inspection, T }) {
+function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
   const d = daysUntil(inspection.nextDate);
   const danger = d <= 30;
-  return <div className={`rounded-2xl border p-3 ${danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}><div className="flex justify-between gap-2"><b>{inspection.type}</b>{danger ? <Badge cls="bg-red-600 text-white border-red-600">{T.warning}</Badge> : <Badge cls="bg-green-100 text-green-700 border-green-200">{T.ok}</Badge>}</div><div className="mt-2 text-xs text-zinc-600">{T.done}: {inspection.doneDate || "—"}<br />{T.nextInspection}: {inspection.nextDate || "—"}<br />{T.result}: {inspection.result || "—"}<br />{inspection.notes}</div></div>;
+
+  return (
+    <div className={`rounded-2xl border p-3 ${danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
+      <div className="flex justify-between gap-2">
+        <b>{inspection.type}</b>
+        {danger ? <Badge cls="bg-red-600 text-white border-red-600">{T.warning}</Badge> : <Badge cls="bg-green-100 text-green-700 border-green-200">{T.ok}</Badge>}
+      </div>
+
+      <div className="mt-2 text-xs text-zinc-600">
+        {T.done}: {inspection.doneDate || "—"}<br />
+        {T.nextInspection}: {inspection.nextDate || "—"}<br />
+        {T.result}: {inspection.result || "—"}<br />
+        {inspection.notes}
+      </div>
+
+      {isAdmin && (
+        <Button type="button" variant="outline" onClick={onDelete} className="mt-3 w-full rounded-xl text-red-600">
+          <Trash2 className="mr-2 h-4 w-4" /> {T.deleteInspection}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
