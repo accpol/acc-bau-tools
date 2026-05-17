@@ -1088,9 +1088,7 @@ export default function App() {
     if (supabase) {
       const { error } = await supabase.from("tools").upsert({ id: normalizedTool.id, data: normalizedTool });
       if (error) {
-        alert((T.savePhotoError || "Nie udało się zapisać danych w Supabase:") + " " + error.message + "
-
-" + (T.savePhotoErrorHint || "Spróbuj dodać mniej zdjęć albo mniejsze zdjęcia."));
+        alert((T.savePhotoError || "Nie udało się zapisać danych w Supabase:") + " " + error.message + "\n\n" + (T.savePhotoErrorHint || "Spróbuj dodać mniej zdjęć albo mniejsze zdjęcia."));
         console.error("tool save error", error);
         return;
       }
