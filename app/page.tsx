@@ -831,6 +831,25 @@ function photoCountText(count, T) {
   return `${count} ${count === 1 ? T.photoOne : T.photosMany}`;
 }
 
+
+function historyAttachments(item) {
+  const list = [];
+  if (Array.isArray(item?.attachments)) list.push(...item.attachments);
+  if (Array.isArray(item?.photos)) list.push(...item.photos);
+  if (Array.isArray(item?.inspectionAttachments)) list.push(...item.inspectionAttachments);
+  return list.map((a, i) => normalizeAttachment(a, i)).filter(Boolean);
+}
+
+function historyPhotoCount(item) {
+  return (item?.photosFromGiver?.length || 0) + (item?.photosFromReceiver?.length || 0) + historyAttachments(item).length;
+}
+
+function attachmentCountText(count, T) {
+  if (!count) return T.noAttachments || T.noPhotosShort;
+  return `${count} ${T.attachments || T.photos}`;
+}
+
+
 export default function App() {
   const [tools, setTools] = useState([]);
   const [history, setHistory] = useState([]);
@@ -1125,7 +1144,7 @@ export default function App() {
       ? `${normalized.type}: ${normalized.doneDate} — ${normalized.notes || T.noNextDateRequired}`
       : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
 
-    updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details);
+    updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details, { historyExtra: { attachments: normalized.attachments || [] } });
     setShowInspection(false);
   }
 
@@ -1247,7 +1266,7 @@ export default function App() {
         from: h.from || "",
         to: h.to || "",
         user: h.user || "",
-        photos: (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0),
+        photos: historyPhotoCount(h),
       };
     });
 
@@ -1661,7 +1680,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
         <SectionTitle icon={<History />} title={T.history} />
         <div className="max-h-64 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">
           {history.map((h) => {
-            const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0);
+            const photoCount = historyPhotoCount(h);
             return (
               <button
                 type="button"
@@ -1690,35 +1709,81 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
   );
 }
 
-function AttachmentGallery({ attachments = [], T }) {
+function AttachmentGallery({ attachments = [], T, compact = false }) {
   const normalizedAttachments = (attachments || []).map((a, i) => normalizeAttachment(a, i)).filter(Boolean);
+  const [preview, setPreview] = useState(null);
 
   if (!normalizedAttachments.length) {
-    return <div className="rounded-2xl border bg-zinc-50 p-3 text-xs text-zinc-500">{T.noAttachments}</div>;
+    return compact ? null : <div className="rounded-2xl border bg-zinc-50 p-3 text-xs text-zinc-500">{T.noAttachments}</div>;
   }
 
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-      {normalizedAttachments.map((a, i) => {
-        const url = a.url;
-        const name = a.name || `${T.attachments} ${i + 1}`;
-        const type = a.type || "";
-        const isImage = String(type).startsWith("image/") || String(url).startsWith("data:image/");
+    <>
+      <div className={compact ? "mt-2 flex flex-wrap gap-2" : "mt-3 grid gap-2 sm:grid-cols-2"}>
+        {normalizedAttachments.map((a, i) => {
+          const url = a.url;
+          const name = a.name || `${T.attachments} ${i + 1}`;
+          const type = a.type || "";
+          const isImage = String(type).startsWith("image/") || String(url).startsWith("data:image/");
 
-        return (
-          <a key={a.id || i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow-sm hover:shadow-md">
-            {isImage ? (
-              <img src={url} alt={name} className="h-28 w-full rounded-xl object-cover" />
+          if (compact) {
+            return isImage ? (
+              <button
+                type="button"
+                key={a.id || i}
+                onClick={() => setPreview({ url, name })}
+                className="h-12 w-12 overflow-hidden rounded-xl border bg-white p-1 shadow-sm hover:ring-2 hover:ring-orange-400"
+                title={name}
+              >
+                <img src={url} alt={name} className="h-full w-full rounded-lg object-cover" />
+              </button>
             ) : (
+              <a
+                key={a.id || i}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-12 min-w-12 items-center justify-center rounded-xl border bg-white px-2 text-[10px] font-black text-zinc-600 shadow-sm hover:ring-2 hover:ring-orange-400"
+                title={name}
+              >
+                PDF
+              </a>
+            );
+          }
+
+          return isImage ? (
+            <button
+              type="button"
+              key={a.id || i}
+              onClick={() => setPreview({ url, name })}
+              className="block overflow-hidden rounded-2xl border bg-white p-2 text-left shadow-sm hover:shadow-md"
+            >
+              <img src={url} alt={name} className="h-28 w-full rounded-xl object-cover" />
+              <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{name}</div>
+            </button>
+          ) : (
+            <a key={a.id || i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow-sm hover:shadow-md">
               <div className="flex h-28 items-center justify-center rounded-xl bg-zinc-100 p-3 text-center text-xs font-bold text-zinc-600">
                 PDF / FILE<br />{name}
               </div>
-            )}
-            <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{name}</div>
-          </a>
-        );
-      })}
-    </div>
+              <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{name}</div>
+            </a>
+          );
+        })}
+      </div>
+
+      {preview && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
+          <div className="relative max-h-[92vh] max-w-5xl overflow-auto rounded-3xl bg-white p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-sm font-black text-white">
+              ×
+            </button>
+            <img src={preview.url} alt={preview.name} className="max-h-[82vh] w-auto rounded-2xl object-contain" />
+            <div className="mt-2 px-2 text-sm font-bold text-zinc-700">{preview.name}</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1730,8 +1795,14 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
 
   return (
     <div className={`rounded-2xl border p-3 ${service ? "border-zinc-200 bg-zinc-50" : danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
-      <div className="flex justify-between gap-2">
-        <b>{inspection.type}</b>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate font-black">{inspection.type}</div>
+          <div className="mt-1 text-xs text-zinc-600">
+            {T.done}: {inspection.doneDate || "—"}
+            {!service && <> • {T.nextInspection}: {inspection.nextDate || "—"}</>}
+          </div>
+        </div>
         {service ? (
           <Badge cls="bg-zinc-100 text-zinc-700 border-zinc-200">{T.serviceRecord}</Badge>
         ) : danger ? (
@@ -1741,22 +1812,26 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
         )}
       </div>
 
-      <div className="mt-2 text-xs text-zinc-600">
-        {T.done}: {inspection.doneDate || "—"}<br />
-        {!service && <>{T.nextInspection}: {inspection.nextDate || "—"}<br /></>}
-        {!service && <>{T.result}: {inspection.result || "—"}<br /></>}
-        {service && <>{T.workDone}: {inspection.notes || "—"}<br /></>}
-        {!service && inspection.notes}
-        {service && <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-500">{T.noNextDateRequired}</div>}
+      <div className="mt-2 line-clamp-3 text-xs text-zinc-600">
+        {service ? (
+          <>{T.workDone}: {inspection.notes || "—"}</>
+        ) : (
+          <>
+            {T.result}: {inspection.result || "—"}
+            {inspection.notes ? <> • {inspection.notes}</> : null}
+          </>
+        )}
       </div>
 
-      <div className="mt-3">
-        <div className="mb-2 text-xs font-black text-zinc-500">{T.attachments}</div>
-        <AttachmentGallery attachments={attachments} T={T} />
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border bg-white/70 px-2 py-2">
+        <div className="text-[11px] font-black text-zinc-500">
+          {T.attachments}: {attachments.length}
+        </div>
+        <AttachmentGallery attachments={attachments} T={T} compact />
       </div>
 
       {isAdmin && (
-        <Button type="button" variant="outline" onClick={onDelete} className="mt-3 w-full rounded-xl text-red-600">
+        <Button type="button" variant="outline" onClick={onDelete} className="mt-3 w-full rounded-xl py-2 text-red-600">
           <Trash2 className="mr-2 h-4 w-4" /> {T.deleteInspection}
         </Button>
       )}
@@ -1929,15 +2004,72 @@ function TransferModal({ T, code, tool, onClose }) {
 }
 
 function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
-  return <Modal wide><ModalHeader title={T.historyTitle} subtitle={T.historySubtitle} onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> {T.printAllHistory}</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">{T.date}</th><th className="p-3">{T.equipment}</th><th className="p-3">ID / Serial</th><th className="p-3">{T.action}</th><th className="p-3">{T.from}</th><th className="p-3">{T.to}</th><th className="p-3">{T.details}</th><th className="p-3">{T.photos}</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3 font-bold">{photoCountText(photoCount, T)}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">{T.historyClickHint}</p></div></Modal>;
+  return <Modal wide><ModalHeader title={T.historyTitle} subtitle={T.historySubtitle} onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> {T.printAllHistory}</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">{T.date}</th><th className="p-3">{T.equipment}</th><th className="p-3">ID / Serial</th><th className="p-3">{T.action}</th><th className="p-3">{T.from}</th><th className="p-3">{T.to}</th><th className="p-3">{T.details}</th><th className="p-3">{T.photos}</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = historyPhotoCount(h); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3 font-bold">{photoCountText(photoCount, T)}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">{T.historyClickHint}</p></div></Modal>;
 }
 
 function HistoryDetailModal({ T, item, tool, onClose }) {
-  return <Modal wide><ModalHeader title={T.historyDetailTitle} subtitle={`${tool?.name || item.toolId} • ${item.date}`} onClose={onClose} /><div className="p-5"><div className="mb-5 rounded-2xl border bg-zinc-50 p-4 text-sm"><b>{T.action}:</b> {historyActionText(item.action, T)}<br /><b>{T.details}:</b> {historyDetailsText(item.details, T)}<br /><b>{T.userLabel}:</b> {item.user}</div><div className="grid gap-5 md:grid-cols-2"><PhotoGallery title={T.giverPhotos} photos={item.photosFromGiver || []} T={T} /><PhotoGallery title={T.receiverPhotos} photos={item.photosFromReceiver || []} T={T} /></div></div></Modal>;
+  const attachments = historyAttachments(item);
+
+  return (
+    <Modal wide>
+      <ModalHeader title={T.historyDetailTitle} subtitle={`${tool?.name || item.toolId} • ${item.date}`} onClose={onClose} />
+      <div className="p-5">
+        <div className="mb-5 rounded-2xl border bg-zinc-50 p-4 text-sm">
+          <b>{T.action}:</b> {historyActionText(item.action, T)}<br />
+          <b>{T.details}:</b> {historyDetailsText(item.details, T)}<br />
+          <b>{T.userLabel}:</b> {item.user || "—"}<br />
+          <b>{T.photos}:</b> {photoCountText(historyPhotoCount(item), T)}
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <PhotoGallery title={T.giverPhotos} photos={item.photosFromGiver || []} T={T} />
+          <PhotoGallery title={T.receiverPhotos} photos={item.photosFromReceiver || []} T={T} />
+        </div>
+
+        <div className="mt-5">
+          <h3 className="mb-3 font-black">{T.attachments}</h3>
+          <AttachmentGallery attachments={attachments} T={T} />
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 function PhotoGallery({ title, photos, T }) {
-  return <div><h3 className="mb-3 font-black">{title}</h3>{photos.length ? <div className="grid gap-3 sm:grid-cols-2">{photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow"><img src={p} className="h-40 w-full rounded-xl object-cover" /></a>)}</div> : <div className="rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-500">{T.noPhotos}</div>}</div>;
+  const [preview, setPreview] = useState(null);
+
+  return (
+    <div>
+      <h3 className="mb-3 font-black">{title}</h3>
+      {photos.length ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {photos.map((p, i) => (
+            <button
+              type="button"
+              key={i}
+              onClick={() => setPreview(p)}
+              className="block overflow-hidden rounded-2xl border bg-white p-2 text-left shadow hover:ring-2 hover:ring-orange-400"
+            >
+              <img src={p} className="h-40 w-full rounded-xl object-cover" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-500">{T.noPhotos}</div>
+      )}
+
+      {preview && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
+          <div className="relative max-h-[92vh] max-w-5xl overflow-auto rounded-3xl bg-white p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-sm font-black text-white">
+              ×
+            </button>
+            <img src={preview} className="max-h-[84vh] w-auto rounded-2xl object-contain" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
