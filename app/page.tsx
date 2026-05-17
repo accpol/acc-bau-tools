@@ -75,6 +75,10 @@ const I18N = {
     failureReported: "Zgłoszono awarię",
     failureReportedDetails: "Użytkownik zgłosił awarię urządzenia",
     failureStatus: "Awaria",
+    clearFailure: "Zdejmij awarię",
+    failureCleared: "Zdjęto awarię",
+    failureClearedDetails: "Administrator zdjął awarię urządzenia",
+    workerCannotClearFailure: "Awarię może zdjąć tylko admin.",
     showTransferCode: "Pokaż kod przekazania",
     printQr: "Drukuj QR",
     addInspection: "Dodaj przegląd",
@@ -246,6 +250,10 @@ const I18N = {
     failureReported: "Failure reported",
     failureReportedDetails: "User reported equipment failure",
     failureStatus: "Failure",
+    clearFailure: "Clear failure",
+    failureCleared: "Failure cleared",
+    failureClearedDetails: "Admin cleared the equipment failure",
+    workerCannotClearFailure: "Only admin can clear a failure.",
     showTransferCode: "Show handover QR",
     printQr: "Print QR",
     addInspection: "Add inspection",
@@ -417,6 +425,10 @@ const I18N = {
     failureReported: "Störung gemeldet",
     failureReportedDetails: "Benutzer hat eine Gerätestörung gemeldet",
     failureStatus: "Störung",
+    clearFailure: "Störung entfernen",
+    failureCleared: "Störung entfernt",
+    failureClearedDetails: "Admin hat die Gerätestörung entfernt",
+    workerCannotClearFailure: "Nur Admin kann eine Störung entfernen.",
     showTransferCode: "Übergabe-QR anzeigen",
     printQr: "QR drucken",
     addInspection: "Prüfung hinzufügen",
@@ -894,6 +906,8 @@ function historyActionText(value, T) {
     "Przejęcie": T.claimAction,
     "Zmieniono dane": T.changedData,
     "Dodano sprzęt": T.addedTool,
+    "Zgłoszono awarię": T.failureReported,
+    "Zdjęto awarię": T.failureCleared,
   };
   return map[value] || value || "—";
 }
@@ -1346,6 +1360,26 @@ export default function App() {
   function reportFailure() {
     if (!selected) return;
     const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const hasFailure = currentTool.status === "Awaria" || currentTool.status === "Uszkodzone";
+
+    if (hasFailure) {
+      if (!isAdmin) return alert(T.workerCannotClearFailure || T.noPermission);
+
+      const restoredStatus = currentTool.assignedTo ? "Wydane" : "Dostępne";
+      const updated = {
+        ...currentTool,
+        status: restoredStatus,
+        notes: currentTool.notes || "",
+      };
+
+      updateTool(
+        updated,
+        T.failureCleared || "Zdjęto awarię",
+        `${T.failureClearedDetails || "Administrator zdjął awarię urządzenia"}: ${user || "—"}`
+      );
+      return;
+    }
+
     const updated = {
       ...currentTool,
       status: "Awaria",
@@ -1765,7 +1799,12 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button>
-          <Button onClick={onReportFailure} variant="outline" className="rounded-2xl border-red-300 text-red-700 hover:bg-red-50"><AlertTriangle className="mr-2 h-4 w-4" /> {T.reportFailure || "Zgłoś awarię"}</Button>
+          {(!(tool.status === "Awaria" || tool.status === "Uszkodzone") || isAdmin) && (
+            <Button onClick={onReportFailure} variant="outline" className={`rounded-2xl ${tool.status === "Awaria" || tool.status === "Uszkodzone" ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50" : "border-red-300 text-red-700 hover:bg-red-50"}`}>
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              {(tool.status === "Awaria" || tool.status === "Uszkodzone") && isAdmin ? (T.clearFailure || "Zdejmij awarię") : (T.reportFailure || "Zgłoś awarię")}
+            </Button>
+          )}
           {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
