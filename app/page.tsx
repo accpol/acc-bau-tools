@@ -79,6 +79,12 @@ const I18N = {
     failureCleared: "Zdjęto awarię",
     failureClearedDetails: "Administrator zdjął awarię urządzenia",
     workerCannotClearFailure: "Awarię może zdjąć tylko admin.",
+    qrUnreadable: "QR nieczytelne",
+    qrUnreadableReported: "Zgłoszono nieczytelny QR",
+    qrUnreadableDetails: "Użytkownik zgłosił, że naklejka QR jest nieczytelna",
+    qrReplacementReceived: "Nowy QR otrzymano",
+    qrReplacementReceivedDetails: "Potwierdzono otrzymanie nowej naklejki QR",
+    qrAlarmStatus: "QR nieczytelne — potrzebna nowa naklejka",
     showTransferCode: "Pokaż kod przekazania",
     printQr: "Drukuj QR",
     addInspection: "Dodaj przegląd",
@@ -254,6 +260,12 @@ const I18N = {
     failureCleared: "Failure cleared",
     failureClearedDetails: "Admin cleared the equipment failure",
     workerCannotClearFailure: "Only admin can clear a failure.",
+    qrUnreadable: "QR unreadable",
+    qrUnreadableReported: "Unreadable QR reported",
+    qrUnreadableDetails: "User reported that the QR label is unreadable",
+    qrReplacementReceived: "New QR received",
+    qrReplacementReceivedDetails: "New QR label receipt confirmed",
+    qrAlarmStatus: "QR unreadable — new label needed",
     showTransferCode: "Show handover QR",
     printQr: "Print QR",
     addInspection: "Add inspection",
@@ -429,6 +441,12 @@ const I18N = {
     failureCleared: "Störung entfernt",
     failureClearedDetails: "Admin hat die Gerätestörung entfernt",
     workerCannotClearFailure: "Nur Admin kann eine Störung entfernen.",
+    qrUnreadable: "QR unlesbar",
+    qrUnreadableReported: "Unlesbarer QR gemeldet",
+    qrUnreadableDetails: "Benutzer hat gemeldet, dass der QR-Aufkleber unlesbar ist",
+    qrReplacementReceived: "Neuer QR erhalten",
+    qrReplacementReceivedDetails: "Erhalt des neuen QR-Aufklebers bestätigt",
+    qrAlarmStatus: "QR unlesbar — neuer Aufkleber erforderlich",
     showTransferCode: "Übergabe-QR anzeigen",
     printQr: "QR drucken",
     addInspection: "Prüfung hinzufügen",
@@ -908,6 +926,8 @@ function historyActionText(value, T) {
     "Dodano sprzęt": T.addedTool,
     "Zgłoszono awarię": T.failureReported,
     "Zdjęto awarię": T.failureCleared,
+    "Zgłoszono nieczytelny QR": T.qrUnreadableReported,
+    "Nowy QR otrzymano": T.qrReplacementReceived,
   };
   return map[value] || value || "—";
 }
@@ -1393,6 +1413,27 @@ export default function App() {
     );
   }
 
+  function toggleQrIssue() {
+    if (!selected) return;
+    const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const hasQrIssue = !!currentTool.qrIssue;
+
+    const updated = {
+      ...currentTool,
+      qrIssue: !hasQrIssue,
+      qrIssueBy: hasQrIssue ? "" : (user || ""),
+      qrIssueAt: hasQrIssue ? "" : new Date().toLocaleString("pl-PL"),
+    };
+
+    updateTool(
+      updated,
+      hasQrIssue ? (T.qrReplacementReceived || "Nowy QR otrzymano") : (T.qrUnreadableReported || "Zgłoszono nieczytelny QR"),
+      hasQrIssue
+        ? `${T.qrReplacementReceivedDetails || "Potwierdzono otrzymanie nowej naklejki QR"}: ${user || "—"}`
+        : `${T.qrUnreadableDetails || "Użytkownik zgłosił, że naklejka QR jest nieczytelna"}: ${user || "—"}`
+    );
+  }
+
   function printHistory(list = history, title = T.historyTitle) {
     const rows = list.map((h) => {
       const tool = tools.find((t) => t.id === h.toolId);
@@ -1525,7 +1566,7 @@ export default function App() {
                     return;
                   }
                 }
-              }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
+              }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onQrIssue={toggleQrIssue} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -1753,6 +1794,7 @@ function ToolRow({ tool, active, onClick, T }) {
             </div>
             <Badge cls={badgeStatus(tool.status)}>{tool.status}</Badge>
             <Badge cls={state.cls}>{state.label}</Badge>
+            {tool.qrIssue && <Badge cls="bg-amber-100 text-amber-800 border-amber-200">{T.qrUnreadable || "QR nieczytelne"}</Badge>}
           </div>
           <p className="mt-1 text-sm text-zinc-500">{tool.id} • {tool.brand} {tool.model} • SN: {tool.serial}</p>
           <div className="mt-2 text-xs text-zinc-600">{tool.project} • {tool.location} • {tool.assignedTo || T.unassigned} • {T.next}: {u?.nextDate || T.missing}</div>
@@ -1765,7 +1807,7 @@ function ToolRow({ tool, active, onClick, T }) {
   );
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onReportFailure, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onReportFailure, onQrIssue, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
   const state = inspectionStatus(tool, T);
 
   return (
@@ -1783,9 +1825,11 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
         {tool.photo && <div className="mt-5 w-full max-w-[220px] overflow-hidden rounded-3xl border bg-zinc-50 p-2"><img src={tool.photo} alt={tool.name} className="h-36 w-full rounded-2xl object-cover" /></div>}
 
         {(tool.status === "Awaria" || tool.status === "Uszkodzone") && <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700"><AlertTriangle className="mr-2 inline h-4 w-4" /> {T.failureStatus || "Awaria"}</div>}
+        {tool.qrIssue && <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800"><ScanLine className="mr-2 inline h-4 w-4" /> {T.qrAlarmStatus || "QR nieczytelne — potrzebna nowa naklejka"}</div>}
 
         <div className="mt-5 grid gap-3 text-sm">
           <Info label={T.status} value={tool.status || "—"} />
+          {tool.qrIssue && <Info label="QR" value={T.qrAlarmStatus || "QR nieczytelne — potrzebna nowa naklejka"} />}
           <Info label={T.category} value={tool.category} />
           <Info label={T.brandModel} value={`${tool.brand} ${tool.model}`} />
           <Info label={T.serial} value={tool.serial} />
@@ -1805,6 +1849,10 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
               {(tool.status === "Awaria" || tool.status === "Uszkodzone") && isAdmin ? (T.clearFailure || "Zdejmij awarię") : (T.reportFailure || "Zgłoś awarię")}
             </Button>
           )}
+          <Button onClick={onQrIssue} variant="outline" className={`rounded-2xl ${tool.qrIssue ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50" : "border-amber-300 text-amber-700 hover:bg-amber-50"}`}>
+            <ScanLine className="mr-2 h-4 w-4" />
+            {tool.qrIssue ? (T.qrReplacementReceived || "Nowy QR otrzymano") : (T.qrUnreadable || "QR nieczytelne")}
+          </Button>
           {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
