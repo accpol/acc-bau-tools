@@ -1327,6 +1327,7 @@ export default function App() {
 
   function returnTool() {
     if (!selected) return;
+    if (!isAdmin) return alert(T.noPermission);
     updateTool({ ...selected, status: "Dostępne", assignedTo: "" }, T.returnTool, `Zwrócono do magazynu z: ${selected.assignedTo || "brak"}`);
   }
 
@@ -1733,7 +1734,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button>
-          <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>
+          {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
           {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
