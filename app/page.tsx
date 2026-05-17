@@ -734,8 +734,48 @@ function decodeTicket(code) {
   }
 }
 
+function normalizeAttachment(attachment, index = 0) {
+  if (!attachment) return null;
+  if (typeof attachment === "string") {
+    return {
+      id: `att-${index}-${attachment.slice(0, 24)}`,
+      name: `Attachment ${index + 1}`,
+      type: attachment.startsWith("data:image/") ? "image/*" : "application/octet-stream",
+      url: attachment,
+    };
+  }
+
+  const url = attachment.url || attachment.dataUrl || attachment.data || attachment.src || attachment.content || "";
+  if (!url) return null;
+
+  return {
+    id: attachment.id || `att-${index}-${Date.now()}`,
+    name: attachment.name || attachment.filename || `Attachment ${index + 1}`,
+    type: attachment.type || attachment.mimeType || (String(url).startsWith("data:image/") ? "image/*" : "application/octet-stream"),
+    url,
+  };
+}
+
+function normalizeInspectionItem(item) {
+  if (!item) return null;
+  const attachments = Array.isArray(item.attachments)
+    ? item.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean)
+    : [];
+
+  return {
+    ...item,
+    id: item.id || crypto.randomUUID?.() || String(Date.now() + Math.random()),
+    kind: isServiceRecord(item) ? "service" : (item.kind || "inspection"),
+    attachments,
+  };
+}
+
+function normalizeInspectionsList(list) {
+  return Array.isArray(list) ? list.map(normalizeInspectionItem).filter(Boolean) : [];
+}
+
 function inspections(tool) {
-  return Array.isArray(tool?.inspections) ? tool.inspections : [];
+  return normalizeInspectionsList(tool?.inspections);
 }
 
 function isServiceRecord(item) {
@@ -861,7 +901,10 @@ export default function App() {
         supabase.from("history").select("id,data"),
       ]);
 
-      let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean);
+      let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
+        ...tool,
+        inspections: normalizeInspectionsList(tool.inspections),
+      }));
       let loadedSettings = settingsRes.data?.data || null;
       let loadedHistory = (historyRes.data || [])
         .map((row) => ({ id: row.id, ...(row.data || {}) }))
@@ -1019,35 +1062,71 @@ export default function App() {
   async function saveTool() {
     if (!isAdmin) return alert(T.noPermission);
     if (!toolForm.id || !toolForm.name) return alert(T.enterIdName);
-    if (editing) setTools((prev) => prev.map((t) => (t.id === toolForm.id ? toolForm : t)));
-    else setTools((prev) => [toolForm, ...prev]);
-    setSelected(toolForm);
-    if (supabase) await supabase.from("tools").upsert({ id: toolForm.id, data: toolForm });
-    log(toolForm, editing ? T.edit : T.add, editing ? "Zmieniono dane" : "Dodano sprzęt");
+
+    const normalizedTool = {
+      ...toolForm,
+      inspections: normalizeInspectionsList(toolForm.inspections),
+    };
+
+    if (editing) setTools((prev) => prev.map((t) => (t.id === normalizedTool.id ? normalizedTool : t)));
+    else setTools((prev) => [normalizedTool, ...prev]);
+    setSelected(normalizedTool);
+    if (supabase) await supabase.from("tools").upsert({ id: normalizedTool.id, data: normalizedTool });
+    log(normalizedTool, editing ? T.edit : T.add, editing ? "Zmieniono dane" : "Dodano sprzęt");
     setShowToolForm(false);
   }
 
   async function updateTool(tool, action, details, options = {}) {
-    setTools((prev) => prev.map((t) => (t.id === tool.id ? tool : t)));
-    setSelected(tool);
-    if (supabase) await supabase.from("tools").upsert({ id: tool.id, data: tool });
-    if (!options.skipHistory) await log(tool, action, details, options.historyExtra || {});
+    const normalizedTool = {
+      ...tool,
+      inspections: normalizeInspectionsList(tool.inspections),
+    };
+
+    setTools((prev) => prev.map((t) => (t.id === normalizedTool.id ? normalizedTool : t)));
+    setSelected(normalizedTool);
+
+    if (supabase) {
+      const { error } = await supabase.from("tools").upsert({ id: normalizedTool.id, data: normalizedTool });
+      if (error) {
+        alert((T.savePhotoError || "Nie udało się zapisać danych w Supabase:") + " " + error.message + "
+
+" + (T.savePhotoErrorHint || "Spróbuj dodać mniej zdjęć albo mniejsze zdjęcia."));
+        console.error("tool save error", error);
+        return;
+      }
+    }
+
+    if (!options.skipHistory) await log(normalizedTool, action, details, options.historyExtra || {});
   }
 
   function addInspection(inspection) {
     if (!isAdmin) return alert(T.noPermission);
-    const normalized = {
+    if (!selected) return;
+
+    const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const previousInspections = normalizeInspectionsList(currentTool.inspections);
+    const normalized = normalizeInspectionItem({
       ...inspection,
+      id: inspection.id || crypto.randomUUID?.() || String(Date.now()),
       kind: isServiceRecord(inspection) ? "service" : "inspection",
       result: isServiceRecord(inspection) ? (inspection.result || T.done) : inspection.result,
       nextDate: isServiceRecord(inspection) ? "" : inspection.nextDate,
-      attachments: Array.isArray(inspection.attachments) ? inspection.attachments : [],
+      attachments: Array.isArray(inspection.attachments)
+        ? inspection.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean)
+        : [],
+    });
+
+    const updated = {
+      ...currentTool,
+      inspections: [normalized, ...previousInspections.filter((entry) => entry.id !== normalized.id)],
     };
-    const updated = { ...selected, inspections: [normalized, ...inspections(selected)] };
+
     if (!isServiceRecord(normalized) && inspectionStatus(updated, T).danger && updated.status !== "Uszkodzone") updated.status = "Do przeglądu";
+
     const details = isServiceRecord(normalized)
       ? `${normalized.type}: ${normalized.doneDate} — ${normalized.notes || T.noNextDateRequired}`
       : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
+
     updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details);
     setShowInspection(false);
   }
@@ -1057,10 +1136,12 @@ export default function App() {
     if (!selected) return;
     if (!confirm(T.confirmDeleteInspection)) return;
 
-    const removed = inspections(selected).find((i) => i.id === inspectionId);
+    const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const currentInspections = normalizeInspectionsList(currentTool.inspections);
+    const removed = currentInspections.find((i) => i.id === inspectionId);
     const updated = {
-      ...selected,
-      inspections: inspections(selected).filter((i) => i.id !== inspectionId),
+      ...currentTool,
+      inspections: currentInspections.filter((i) => i.id !== inspectionId),
     };
 
     updateTool(
@@ -1612,16 +1693,18 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 }
 
 function AttachmentGallery({ attachments = [], T }) {
-  if (!attachments.length) {
+  const normalizedAttachments = (attachments || []).map((a, i) => normalizeAttachment(a, i)).filter(Boolean);
+
+  if (!normalizedAttachments.length) {
     return <div className="rounded-2xl border bg-zinc-50 p-3 text-xs text-zinc-500">{T.noAttachments}</div>;
   }
 
   return (
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
-      {attachments.map((a, i) => {
-        const url = typeof a === "string" ? a : a.url;
-        const name = typeof a === "string" ? `${T.attachments} ${i + 1}` : (a.name || `${T.attachments} ${i + 1}`);
-        const type = typeof a === "string" ? "image/*" : (a.type || "");
+      {normalizedAttachments.map((a, i) => {
+        const url = a.url;
+        const name = a.name || `${T.attachments} ${i + 1}`;
+        const type = a.type || "";
         const isImage = String(type).startsWith("image/") || String(url).startsWith("data:image/");
 
         return (
@@ -1645,7 +1728,7 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
   const service = isServiceRecord(inspection);
   const d = service ? 99999 : daysUntil(inspection.nextDate);
   const danger = !service && d <= 30;
-  const attachments = Array.isArray(inspection.attachments) ? inspection.attachments : [];
+  const attachments = Array.isArray(inspection.attachments) ? inspection.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean) : [];
 
   return (
     <div className={`rounded-2xl border p-3 ${service ? "border-zinc-200 bg-zinc-50" : danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
@@ -1744,7 +1827,12 @@ function InspectionModal({ T, onClose, onSave }) {
       }
     }
 
-    setI((prev) => ({ ...prev, attachments: [...(prev.attachments || []), ...prepared] }));
+    setI((prev) => ({
+      ...prev,
+      attachments: [...((prev.attachments || []).map((a, i) => normalizeAttachment(a, i)).filter(Boolean)), ...prepared],
+    }));
+    if (cameraRef.current) cameraRef.current.value = "";
+    if (uploadRef.current) uploadRef.current.value = "";
     setPreparing(false);
   }
 
