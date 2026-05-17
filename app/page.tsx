@@ -125,6 +125,68 @@ const I18N = {
     inDays: "za",
     noReview: "Brak przeglądu",
     reviewsOk: "Przeglądy OK",
+    days: "dni",
+    printHistory: "Drukuj historię",
+    printAllHistory: "Drukuj całą historię",
+    printGenerated: "Wydruk",
+    historyTitle: "Historia przekazań",
+    historySubtitle: "Kto komu przekazywał, kiedy i jakie urządzenie",
+    historyClickHint: "{T.historyClickHint}",
+    date: "Data",
+    equipment: "Urządzenie",
+    action: "Akcja",
+    from: "Od",
+    to: "Do",
+    details: "Szczegóły",
+    photos: "Zdjęcia",
+    userLabel: "Użytkownik",
+    noPhotosShort: "brak zdjęć",
+    photoOne: "zdjęcie",
+    photosMany: "zdjęć",
+    clickToViewPhotos: "{T.clickToViewPhotos}",
+    historyDetailTitle: "Szczegóły przekazania",
+    giverPhotos: "Zdjęcia przekazującego",
+    receiverPhotos: "Zdjęcia odbierającego",
+    noPhotos: "Brak zdjęć.",
+    addPhotoCamera: "{T.addPhotoCamera}",
+    uploadPhotoDevice: "{T.uploadPhotoDevice}",
+    photosSavedInHistory: "{T.photosSavedInHistory}",
+    noPhotosAdded: "{T.noPhotosAdded}",
+    remove: "Usuń",
+    skip: "Pomiń",
+    savePhotos: "Zapisz zdjęcia",
+    saving: "Zapisywanie...",
+    preparePhotoError: "Nie udało się przygotować zdjęcia. Spróbuj mniejsze zdjęcie.",
+    savePhotoError: "Nie udało się zapisać zdjęć w Supabase:",
+    savePhotoErrorHint: "Spróbuj dodać mniej zdjęć albo mniejsze zdjęcia.",
+    handoverPhotoTitle: "Przekazałeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz",
+    receiverPhotoTitle: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz",
+    transferCreated: "Przekazanie - kod utworzony",
+    handover: "Przekazanie",
+    transferCodeAction: "Kod przekazania",
+    claimAction: "Przejęcie",
+    changedData: "Zmieniono dane",
+    addedTool: "Dodano sprzęt",
+    photosAddedOnHandover: "Zdjęcia dodane przy przekazaniu",
+    photosAddedOnClaim: "Zdjęcia dodane przy przejęciu",
+    waitingForReceiver: "oczekuje na odbiorcę",
+    name: "Nazwa",
+    brand: "Marka",
+    model: "Model",
+    type: "Typ",
+    toolPhoto: "Zdjęcie sprzętu",
+    preview: "Podgląd",
+    removePhoto: "Usuń zdjęcie",
+    loadingDb: "{T.loadingDb}",
+    supabaseOffline: "{T.supabaseOffline}",
+    badTransferCode: "Zły kod przekazania",
+    toolNotFound: "Nie znaleziono narzędzia",
+    cannotClaimFromYourself: "Nie możesz przejąć od siebie",
+    cannotClaimCurrent: "Nie można przejąć. Aktualnie:",
+    openCameraScan: "Otwórz aparat i skanuj QR",
+    closeCamera: "Zamknij aparat",
+    scannerUnsupported: "Ten telefon/przeglądarka nie wspiera automatycznego skanowania QR. Użyj Chrome na Androidzie albo wklej kod ręcznie.",
+    cameraError: "Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.",
   },
   en: {
     appTitle: "ACC Bau Tool Control",
@@ -211,6 +273,68 @@ const I18N = {
     inDays: "in",
     noReview: "No inspection",
     reviewsOk: "Inspections OK",
+    days: "days",
+    printHistory: "Print history",
+    printAllHistory: "Print full history",
+    printGenerated: "Print generated",
+    historyTitle: "Handover history",
+    historySubtitle: "Who handed over what, to whom, and when",
+    historyClickHint: "Click a history entry to view giver and receiver photos.",
+    date: "Date",
+    equipment: "Equipment",
+    action: "Action",
+    from: "From",
+    to: "To",
+    details: "Details",
+    photos: "Photos",
+    userLabel: "User",
+    noPhotosShort: "no photos",
+    photoOne: "photo",
+    photosMany: "photos",
+    clickToViewPhotos: "Click to view photos",
+    historyDetailTitle: "Handover details",
+    giverPhotos: "Giver photos",
+    receiverPhotos: "Receiver photos",
+    noPhotos: "No photos.",
+    addPhotoCamera: "📷 Add photo / take with camera",
+    uploadPhotoDevice: "🖼️ Upload photo from device",
+    photosSavedInHistory: "Photos will be saved in the history of this handover.",
+    noPhotosAdded: "No photos added yet.",
+    remove: "Remove",
+    skip: "Skip",
+    savePhotos: "Save photos",
+    saving: "Saving...",
+    preparePhotoError: "Could not prepare the photo. Try a smaller photo.",
+    savePhotoError: "Could not save photos in Supabase:",
+    savePhotoErrorHint: "Try adding fewer photos or smaller photos.",
+    handoverPhotoTitle: "You handed over the tool — add condition/damage photos if you want",
+    receiverPhotoTitle: "You received the tool — add condition/damage photos if you want",
+    transferCreated: "Handover code created",
+    handover: "Handover",
+    transferCodeAction: "Handover code",
+    claimAction: "Received",
+    changedData: "Data changed",
+    addedTool: "Tool added",
+    photosAddedOnHandover: "Photos added during handover",
+    photosAddedOnClaim: "Photos added during receipt",
+    waitingForReceiver: "waiting for receiver",
+    name: "Name",
+    brand: "Brand",
+    model: "Model",
+    type: "Type",
+    toolPhoto: "Tool photo",
+    preview: "Preview",
+    removePhoto: "Remove photo",
+    loadingDb: "Loading database...",
+    supabaseOffline: "Warning: no Supabase connection. The app is running locally.",
+    badTransferCode: "Invalid handover code",
+    toolNotFound: "Tool not found",
+    cannotClaimFromYourself: "You cannot receive from yourself",
+    cannotClaimCurrent: "Cannot receive. Current holder:",
+    openCameraScan: "Open camera and scan QR",
+    closeCamera: "Close camera",
+    scannerUnsupported: "This phone/browser does not support automatic QR scanning. Use Chrome on Android or paste the code manually.",
+    cameraError: "Could not open camera. Check camera permission and HTTPS.",
   },
   de: {
     appTitle: "ACC Bau Werkzeugverwaltung",
@@ -297,6 +421,68 @@ const I18N = {
     inDays: "in",
     noReview: "Keine Prüfung",
     reviewsOk: "Prüfungen OK",
+    days: "Tage",
+    printHistory: "Historie drucken",
+    printAllHistory: "Gesamte Historie drucken",
+    printGenerated: "Ausdruck",
+    historyTitle: "Übergabehistorie",
+    historySubtitle: "Wer wann welches Gerät an wen übergeben hat",
+    historyClickHint: "Klicken Sie auf einen Historieneintrag, um Fotos von Übergeber und Empfänger zu sehen.",
+    date: "Datum",
+    equipment: "Gerät",
+    action: "Aktion",
+    from: "Von",
+    to: "An",
+    details: "Details",
+    photos: "Fotos",
+    userLabel: "Benutzer",
+    noPhotosShort: "keine Fotos",
+    photoOne: "Foto",
+    photosMany: "Fotos",
+    clickToViewPhotos: "Klicken, um Fotos zu sehen",
+    historyDetailTitle: "Übergabedetails",
+    giverPhotos: "Fotos des Übergebers",
+    receiverPhotos: "Fotos des Empfängers",
+    noPhotos: "Keine Fotos.",
+    addPhotoCamera: "📷 Foto hinzufügen / mit Kamera aufnehmen",
+    uploadPhotoDevice: "🖼️ Foto vom Gerät hochladen",
+    photosSavedInHistory: "Fotos werden in der Historie dieser Übergabe gespeichert.",
+    noPhotosAdded: "Noch keine Fotos hinzugefügt.",
+    remove: "Entfernen",
+    skip: "Überspringen",
+    savePhotos: "Fotos speichern",
+    saving: "Speichern...",
+    preparePhotoError: "Foto konnte nicht vorbereitet werden. Versuchen Sie ein kleineres Foto.",
+    savePhotoError: "Fotos konnten nicht in Supabase gespeichert werden:",
+    savePhotoErrorHint: "Versuchen Sie weniger oder kleinere Fotos hinzuzufügen.",
+    handoverPhotoTitle: "Sie haben das Gerät übergeben — fügen Sie bei Bedarf Zustands-/Schadensfotos hinzu",
+    receiverPhotoTitle: "Sie haben das Gerät übernommen — fügen Sie bei Bedarf Zustands-/Schadensfotos hinzu",
+    transferCreated: "Übergabecode erstellt",
+    handover: "Übergabe",
+    transferCodeAction: "Übergabecode",
+    claimAction: "Übernommen",
+    changedData: "Daten geändert",
+    addedTool: "Gerät hinzugefügt",
+    photosAddedOnHandover: "Fotos bei Übergabe hinzugefügt",
+    photosAddedOnClaim: "Fotos bei Übernahme hinzugefügt",
+    waitingForReceiver: "wartet auf Empfänger",
+    name: "Name",
+    brand: "Marke",
+    model: "Modell",
+    type: "Typ",
+    toolPhoto: "Gerätefoto",
+    preview: "Vorschau",
+    removePhoto: "Foto entfernen",
+    loadingDb: "Datenbank wird geladen...",
+    supabaseOffline: "Hinweis: keine Verbindung zu Supabase. Die App läuft lokal.",
+    badTransferCode: "Ungültiger Übergabecode",
+    toolNotFound: "Werkzeug nicht gefunden",
+    cannotClaimFromYourself: "Sie können nicht von sich selbst übernehmen",
+    cannotClaimCurrent: "Übernahme nicht möglich. Aktuell:",
+    openCameraScan: "Kamera öffnen und QR scannen",
+    closeCamera: "Kamera schließen",
+    scannerUnsupported: "Dieses Telefon/dieser Browser unterstützt kein automatisches QR-Scannen. Verwenden Sie Chrome auf Android oder fügen Sie den Code manuell ein.",
+    cameraError: "Kamera konnte nicht geöffnet werden. Prüfen Sie Kameraberechtigung und HTTPS.",
   },
 };
 
@@ -484,7 +670,7 @@ function inspectionStatus(tool, T = I18N.pl) {
   if (!item) return { danger: true, label: T.noReview, cls: "bg-red-100 text-red-700 border-red-200" };
   const d = daysUntil(item.nextDate);
   if (d < 0) return { danger: true, label: `${item.type} ${T.overdue}`, cls: "bg-red-100 text-red-700 border-red-200" };
-  if (d <= 30) return { danger: true, label: `${item.type} ${T.inDays} ${d} dni`, cls: "bg-red-100 text-red-700 border-red-200" };
+  if (d <= 30) return { danger: true, label: `${item.type} ${T.inDays} ${d} ${T.days}`, cls: "bg-red-100 text-red-700 border-red-200" };
   return { danger: false, label: T.reviewsOk, cls: "bg-green-100 text-green-700 border-green-200" };
 }
 
@@ -493,6 +679,33 @@ function badgeStatus(status) {
   if (status === "Dostępne") return "bg-green-100 text-green-700 border-green-200";
   if (status === "Do przeglądu" || status === "Uszkodzone") return "bg-red-100 text-red-700 border-red-200";
   return "bg-zinc-100 text-zinc-700 border-zinc-200";
+}
+
+function historyActionText(value, T) {
+  const map = {
+    "Przekazanie - kod utworzony": T.transferCreated,
+    "Przekazanie": T.handover,
+    "Kod przekazania": T.transferCodeAction,
+    "Przejęcie": T.claimAction,
+    "Zmieniono dane": T.changedData,
+    "Dodano sprzęt": T.addedTool,
+  };
+  return map[value] || value || "—";
+}
+
+function historyDetailsText(value, T) {
+  const map = {
+    "Zdjęcia dodane przy przekazaniu": T.photosAddedOnHandover,
+    "Zdjęcia dodane przy przejęciu": T.photosAddedOnClaim,
+  };
+  if (!value) return "—";
+  if (map[value]) return map[value];
+  return value.replace("oczekuje na odbiorcę", T.waitingForReceiver);
+}
+
+function photoCountText(count, T) {
+  if (!count) return T.noPhotosShort;
+  return `${count} ${count === 1 ? T.photoOne : T.photosMany}`;
 }
 
 export default function App() {
@@ -769,18 +982,18 @@ export default function App() {
     const code = encodeTicket(ticket);
     setTransferCode(code);
     setShowTransfer(true);
-    setPhotoContext({ historyId: historyItem.id, historyItem, mode: "giver", tool: selected, title: "Przekazałeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+    setPhotoContext({ historyId: historyItem.id, historyItem, mode: "giver", tool: selected, title: T.handoverPhotoTitle });
     setShowPhotoModal(true);
   }
 
   async function claimTransfer(code) {
     const ticket = decodeTicket(code.trim());
-    if (!ticket) return alert("Zły kod przekazania");
+    if (!ticket) return alert(T.badTransferCode);
 
     const tool = tools.find((t) => t.id === ticket.toolId);
-    if (!tool) return alert("Nie znaleziono narzędzia");
-    if (ticket.from === user) return alert("Nie możesz przejąć od siebie");
-    if (tool.assignedTo && tool.assignedTo !== ticket.from) return alert(`Nie można przejąć. Aktualnie: ${tool.assignedTo}`);
+    if (!tool) return alert(T.toolNotFound);
+    if (ticket.from === user) return alert(T.cannotClaimFromYourself);
+    if (tool.assignedTo && tool.assignedTo !== ticket.from) return alert(`${T.cannotClaimCurrent} ${tool.assignedTo}`);
 
     const updated = { ...tool, status: "Wydane", assignedTo: user };
     await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`, { skipHistory: true });
@@ -820,7 +1033,7 @@ export default function App() {
       claimedAt: new Date().toLocaleString("pl-PL"),
     });
 
-    setPhotoContext({ historyId: updatedHistory.id, historyItem: updatedHistory, mode: "receiver", tool: updated, title: "Przejąłeś urządzenie — dodaj zdjęcia stanu/uszkodzeń, jeśli chcesz" });
+    setPhotoContext({ historyId: updatedHistory.id, historyItem: updatedHistory, mode: "receiver", tool: updated, title: T.receiverPhotoTitle });
     setShowPhotoModal(true);
     setShowClaim(false);
     setTransferCode("");
@@ -831,7 +1044,7 @@ export default function App() {
     updateTool({ ...selected, status: "Dostępne", assignedTo: "" }, T.returnTool, `Zwrócono do magazynu z: ${selected.assignedTo || "brak"}`);
   }
 
-  function printHistory(list = history, title = "ACC Bau - historia przekazań") {
+  function printHistory(list = history, title = T.historyTitle) {
     const rows = list.map((h) => {
       const tool = tools.find((t) => t.id === h.toolId);
       return {
@@ -848,7 +1061,7 @@ export default function App() {
       };
     });
 
-    const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">Wydruk: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Data</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Urządzenie</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Akcja</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Od</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Do</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Szczegóły</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">Zdjęcia</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${r.action}</td><td style="border:1px solid #ccc;padding:7px">${r.from || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.to || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.details}</td><td style="border:1px solid #ccc;padding:7px">${r.photos}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
+    const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">${T.printGenerated}: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.date}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.equipment}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.action}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.from}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.to}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.details}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.photos}</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${historyActionText(r.action, T)}</td><td style="border:1px solid #ccc;padding:7px">${r.from || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.to || "—"}</td><td style="border:1px solid #ccc;padding:7px">${historyDetailsText(r.details, T)}</td><td style="border:1px solid #ccc;padding:7px">${r.photos}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
     w.document.write(html);
     w.document.close();
@@ -903,8 +1116,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.18),transparent_34%),linear-gradient(135deg,#2f302d_0%,#474944_42%,#d7d2c8_100%)] text-zinc-950">
-      {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">Ładowanie bazy danych...</div></div></div>}
-      {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">Uwaga: brak połączenia z Supabase. Aplikacja działa lokalnie.</div></div>}
+      {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">{T.loadingDb}</div></div></div>}
+      {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">{T.supabaseOffline}</div></div>}
       <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
@@ -1236,7 +1449,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
           <Button onClick={onTransfer} className="rounded-2xl bg-emerald-600 py-5 font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.showTransferCode}</Button>
           <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
-          <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> Drukuj historię</Button>
+          <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
           {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
           {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
         </div>
@@ -1257,15 +1470,15 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <b>{h.action}</b> — {h.date}<br />
-                    <span className="text-zinc-600">{h.details}</span><br />
-                    <span className="text-zinc-400">Od: {h.from || "—"} • Do: {h.to || "—"}</span>
+                    <b>{historyActionText(h.action, T)}</b> — {h.date}<br />
+                    <span className="text-zinc-600">{historyDetailsText(h.details, T)}</span><br />
+                    <span className="text-zinc-400">{T.from}: {h.from || "—"} • {T.to}: {h.to || "—"}</span>
                   </div>
                   <div className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${photoCount ? "bg-orange-100 text-orange-700" : "bg-zinc-100 text-zinc-400"}`}>
-                    {photoCount ? `${photoCount} zdjęć` : "brak zdjęć"}
+                    {photoCountText(photoCount, T)}
                   </div>
                 </div>
-                {photoCount > 0 && <div className="mt-2 text-[11px] font-bold text-orange-700">Kliknij, aby zobaczyć zdjęcia</div>}
+                {photoCount > 0 && <div className="mt-2 text-[11px] font-bold text-orange-700">{T.clickToViewPhotos}</div>}
               </button>
             );
           })}
@@ -1290,17 +1503,17 @@ function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
       const compressed = await compressImage(file, 1200, 0.7);
       setForm({ ...form, photo: compressed });
     } catch (e) {
-      alert("Nie udało się przygotować zdjęcia. Spróbuj mniejsze zdjęcie.");
+      alert(T.preparePhotoError);
       console.error(e);
     }
   }
 
-  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label="Nazwa" value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label="Marka" value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label="Model" value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">Zdjęcie sprzętu</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img src={form.photo} alt="Podgląd" className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>Usuń zdjęcie</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
+  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label={T.name} value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label={T.brand} value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label={T.model} value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.toolPhoto}</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img src={form.photo} alt={T.preview} className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>{T.removePhoto}</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
 }
 
 function InspectionModal({ T, onClose, onSave }) {
   const [i, setI] = useState({ id: crypto.randomUUID?.() || String(Date.now()), type: "DGUV/VDE", doneDate: today(), nextDate: addMonths(today(), 6), result: "OK", notes: "" });
-  return <Modal><ModalHeader title={T.addInspection} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><FormSelect label="Typ" value={i.type} options={inspectionTypes} onChange={(v) => setI({ ...i, type: v })} /><FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} /><Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} /><Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} /></Modal>;
+  return <Modal><ModalHeader title={T.addInspection} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><FormSelect label={T.type} value={i.type} options={inspectionTypes} onChange={(v) => setI({ ...i, type: v })} /><FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} /><Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} /><Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} /></Modal>;
 }
 
 function SettingsModal({ T, settings, setSettings, onClose }) {
@@ -1330,15 +1543,15 @@ function TransferModal({ T, code, tool, onClose }) {
 }
 
 function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
-  return <Modal wide><ModalHeader title="Historia przekazań" subtitle="Kto komu przekazywał, kiedy i jakie urządzenie" onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> Drukuj całą historię</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Urządzenie</th><th className="p-3">ID / Serial</th><th className="p-3">Akcja</th><th className="p-3">Od</th><th className="p-3">Do</th><th className="p-3">Szczegóły</th><th className="p-3">Zdjęcia</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{h.action}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{h.details}</td><td className="p-3 font-bold">{photoCount ? `${photoCount} zdjęć` : "—"}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">Kliknij wpis historii, aby zobaczyć zdjęcia przekazującego i odbierającego.</p></div></Modal>;
+  return <Modal wide><ModalHeader title={T.historyTitle} subtitle={T.historySubtitle} onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> {T.printAllHistory}</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">{T.date}</th><th className="p-3">{T.equipment}</th><th className="p-3">ID / Serial</th><th className="p-3">{T.action}</th><th className="p-3">{T.from}</th><th className="p-3">{T.to}</th><th className="p-3">{T.details}</th><th className="p-3">{T.photos}</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3 font-bold">{photoCountText(photoCount, T)}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">{T.historyClickHint}</p></div></Modal>;
 }
 
 function HistoryDetailModal({ T, item, tool, onClose }) {
-  return <Modal wide><ModalHeader title="Szczegóły przekazania" subtitle={`${tool?.name || item.toolId} • ${item.date}`} onClose={onClose} /><div className="p-5"><div className="mb-5 rounded-2xl border bg-zinc-50 p-4 text-sm"><b>Akcja:</b> {item.action}<br /><b>Szczegóły:</b> {item.details}<br /><b>Użytkownik:</b> {item.user}</div><div className="grid gap-5 md:grid-cols-2"><PhotoGallery title="Zdjęcia przekazującego" photos={item.photosFromGiver || []} /><PhotoGallery title="Zdjęcia odbierającego" photos={item.photosFromReceiver || []} /></div></div></Modal>;
+  return <Modal wide><ModalHeader title={T.historyDetailTitle} subtitle={`${tool?.name || item.toolId} • ${item.date}`} onClose={onClose} /><div className="p-5"><div className="mb-5 rounded-2xl border bg-zinc-50 p-4 text-sm"><b>{T.action}:</b> {historyActionText(item.action, T)}<br /><b>{T.details}:</b> {historyDetailsText(item.details, T)}<br /><b>{T.userLabel}:</b> {item.user}</div><div className="grid gap-5 md:grid-cols-2"><PhotoGallery title={T.giverPhotos} photos={item.photosFromGiver || []} T={T} /><PhotoGallery title={T.receiverPhotos} photos={item.photosFromReceiver || []} T={T} /></div></div></Modal>;
 }
 
-function PhotoGallery({ title, photos }) {
-  return <div><h3 className="mb-3 font-black">{title}</h3>{photos.length ? <div className="grid gap-3 sm:grid-cols-2">{photos.map((p, i) => <a key={i} href={p} target="_blank" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow"><img src={p} className="h-40 w-full rounded-xl object-cover" /></a>)}</div> : <div className="rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-500">Brak zdjęć.</div>}</div>;
+function PhotoGallery({ title, photos, T }) {
+  return <div><h3 className="mb-3 font-black">{title}</h3>{photos.length ? <div className="grid gap-3 sm:grid-cols-2">{photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow"><img src={p} className="h-40 w-full rounded-xl object-cover" /></a>)}</div> : <div className="rounded-2xl border bg-zinc-50 p-4 text-sm text-zinc-500">{T.noPhotos}</div>}</div>;
 }
 
 function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
@@ -1356,7 +1569,7 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
         const compressed = await compressImage(file, 1000, 0.65);
         setPhotos((prev) => [...prev, compressed]);
       } catch (e) {
-        alert("Nie udało się przygotować zdjęcia. Spróbuj mniejsze zdjęcie.");
+        alert(T.preparePhotoError);
         console.error(e);
       }
     }
@@ -1400,7 +1613,7 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
     if (supabase) {
       const { error } = await supabase.from("history").upsert({ id: updatedItem.id, data: updatedItem });
       if (error) {
-        alert("Nie udało się zapisać zdjęć w Supabase: " + error.message + "\n\nSpróbuj dodać mniej zdjęć albo mniejsze zdjęcia.");
+        alert(T.savePhotoError + " " + error.message + "\n\n" + T.savePhotoErrorHint);
         setSaving(false);
         return;
       }
@@ -1440,7 +1653,7 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
             onClick={() => cameraRef.current?.click()}
             className="rounded-2xl bg-emerald-600 py-6 text-base font-black hover:bg-emerald-700"
           >
-            📷 Dodaj zdjęcie / zrób aparatem
+            {T.addPhotoCamera}
           </Button>
 
           <Button
@@ -1449,12 +1662,12 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
             onClick={() => uploadRef.current?.click()}
             className="rounded-2xl py-6 text-base font-black"
           >
-            🖼️ Wgraj zdjęcie z urządzenia
+            {T.uploadPhotoDevice}
           </Button>
         </div>
 
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Zdjęcia zapiszą się w historii tego konkretnego przekazania.
+          {T.photosSavedInHistory}
         </div>
 
         {photos.length > 0 ? (
@@ -1467,21 +1680,21 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
                   onClick={() => removePhoto(i)}
                   className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-1 text-xs font-bold text-white shadow"
                 >
-                  Usuń
+                  {T.remove}
                 </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
-            Nie dodano jeszcze żadnych zdjęć.
+            {T.noPhotosAdded}
           </div>
         )}
 
         <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Pomiń</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{T.skip}</Button>
           <Button type="button" disabled={saving || !photos.length} onClick={save} className="bg-zinc-950 hover:bg-zinc-800">
-            {saving ? "Zapisywanie..." : "Zapisz zdjęcia"}
+            {saving ? T.saving : T.savePhotos}
           </Button>
         </div>
       </div>
@@ -1499,7 +1712,7 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
   async function startScanner() {
     setScanError("");
     if (typeof window === "undefined" || !("BarcodeDetector" in window)) {
-      setScanError("Ten telefon/przeglądarka nie wspiera automatycznego skanowania QR. Użyj Chrome na Androidzie albo wklej kod ręcznie.");
+      setScanError(T.scannerUnsupported);
       return;
     }
     try {
@@ -1513,7 +1726,7 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
         scanLoop();
       }, 200);
     } catch (e) {
-      setScanError("Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.");
+      setScanError(T.cameraError);
     }
   }
 
@@ -1544,7 +1757,7 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
     setScanning(false);
   }
 
-  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={() => { stopScanner(); onClose(); }} /><div className="p-6"><div className="grid gap-4 md:grid-cols-2"><div><Button onClick={startScanner} className="w-full rounded-2xl bg-emerald-600 py-6 text-base font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-5 w-5" /> Otwórz aparat i skanuj QR</Button>{scanning && <div className="mt-4 overflow-hidden rounded-3xl border bg-black p-2"><video ref={videoRef} className="h-72 w-full rounded-2xl object-cover" playsInline muted /></div>}{scanning && <Button onClick={stopScanner} variant="outline" className="mt-3 w-full rounded-2xl">Zamknij aparat</Button>}{scanError && <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{scanError}</div>}</div><div><textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} /><div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => { stopScanner(); onClose(); }}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div></div></div></div></Modal>;
+  return <Modal><ModalHeader title={T.claimTool} subtitle={T.claimSubtitle} onClose={() => { stopScanner(); onClose(); }} /><div className="p-6"><div className="grid gap-4 md:grid-cols-2"><div><Button onClick={startScanner} className="w-full rounded-2xl bg-emerald-600 py-6 text-base font-bold hover:bg-emerald-700"><ScanLine className="mr-2 h-5 w-5" /> {T.openCameraScan}</Button>{scanning && <div className="mt-4 overflow-hidden rounded-3xl border bg-black p-2"><video ref={videoRef} className="h-72 w-full rounded-2xl object-cover" playsInline muted /></div>}{scanning && <Button onClick={stopScanner} variant="outline" className="mt-3 w-full rounded-2xl">{T.closeCamera}</Button>}{scanError && <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{scanError}</div>}</div><div><textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-36 w-full rounded-xl border p-3 text-xs" placeholder={T.transferCode} /><div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.claimWarning}</div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => { stopScanner(); onClose(); }}>{T.cancel}</Button><Button onClick={() => onClaim(code)} className="bg-emerald-600 hover:bg-emerald-700"><ScanLine className="mr-2 h-4 w-4" /> {T.takeover}</Button></div></div></div></div></Modal>;
 }
 
 function Modal({ children, wide }) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className={`max-h-[92vh] w-full overflow-auto rounded-3xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-3xl"}`}>{children}</motion.div></div>; }
