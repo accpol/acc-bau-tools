@@ -198,6 +198,13 @@ const I18N = {
     inspectionDeleted: "Usunięto wpis przeglądu/serwisu",
     inspectionDeletedDetails: "Administrator usunął błędny wpis przeglądu/serwisu",
     noNextDateRequired: "Brak następnego terminu — wpis serwisowy / naprawa",
+    attachments: "Załączniki / zdjęcia / dokumenty",
+    addAttachmentCamera: "📷 Zrób zdjęcie certyfikatu / faktury",
+    uploadAttachmentDevice: "🖼️ Wgraj zdjęcie lub PDF z urządzenia",
+    noAttachments: "Brak załączników.",
+    attachmentSavedHint: "Zdjęcia, certyfikaty lub faktury zapiszą się razem z tym wpisem.",
+    removeAttachment: "Usuń załącznik",
+    attachmentPrepareError: "Nie udało się przygotować załącznika. Spróbuj mniejszy plik.",
     cameraError: "Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.",
   },
   en: {
@@ -358,6 +365,13 @@ const I18N = {
     inspectionDeleted: "Inspection/service entry deleted",
     inspectionDeletedDetails: "Admin deleted an incorrect inspection/service entry",
     noNextDateRequired: "No next date required — service / repair entry",
+    attachments: "Attachments / photos / documents",
+    addAttachmentCamera: "📷 Take certificate / invoice photo",
+    uploadAttachmentDevice: "🖼️ Upload photo or PDF from device",
+    noAttachments: "No attachments.",
+    attachmentSavedHint: "Photos, certificates or invoices will be saved with this entry.",
+    removeAttachment: "Remove attachment",
+    attachmentPrepareError: "Could not prepare the attachment. Try a smaller file.",
     cameraError: "Could not open camera. Check camera permission and HTTPS.",
   },
   de: {
@@ -518,6 +532,13 @@ const I18N = {
     inspectionDeleted: "Prüfungs-/Serviceeintrag gelöscht",
     inspectionDeletedDetails: "Admin hat einen fehlerhaften Prüfungs-/Serviceeintrag gelöscht",
     noNextDateRequired: "Kein nächster Termin erforderlich — Service- / Reparatureintrag",
+    attachments: "Anhänge / Fotos / Dokumente",
+    addAttachmentCamera: "📷 Zertifikat/Rechnung fotografieren",
+    uploadAttachmentDevice: "🖼️ Foto oder PDF vom Gerät hochladen",
+    noAttachments: "Keine Anhänge.",
+    attachmentSavedHint: "Fotos, Zertifikate oder Rechnungen werden mit diesem Eintrag gespeichert.",
+    removeAttachment: "Anhang entfernen",
+    attachmentPrepareError: "Anhang konnte nicht vorbereitet werden. Versuchen Sie eine kleinere Datei.",
     cameraError: "Kamera konnte nicht geöffnet werden. Prüfen Sie Kameraberechtigung und HTTPS.",
   },
 };
@@ -657,6 +678,28 @@ async function compressImage(file, maxSize = 1200, quality = 0.7) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function prepareAttachmentFile(file) {
+  if (!file) return null;
+  const isImage = file.type?.startsWith("image/");
+  const url = isImage ? await compressImage(file, 1200, 0.7) : await readFileAsDataUrl(file);
+  return {
+    id: crypto.randomUUID?.() || String(Date.now() + Math.random()),
+    name: file.name || "attachment",
+    type: file.type || "application/octet-stream",
+    url,
+  };
 }
 
 function qrUrl(text) {
@@ -998,6 +1041,7 @@ export default function App() {
       kind: isServiceRecord(inspection) ? "service" : "inspection",
       result: isServiceRecord(inspection) ? (inspection.result || T.done) : inspection.result,
       nextDate: isServiceRecord(inspection) ? "" : inspection.nextDate,
+      attachments: Array.isArray(inspection.attachments) ? inspection.attachments : [],
     };
     const updated = { ...selected, inspections: [normalized, ...inspections(selected)] };
     if (!isServiceRecord(normalized) && inspectionStatus(updated, T).danger && updated.status !== "Uszkodzone") updated.status = "Do przeglądu";
@@ -1567,10 +1611,41 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
   );
 }
 
+function AttachmentGallery({ attachments = [], T }) {
+  if (!attachments.length) {
+    return <div className="rounded-2xl border bg-zinc-50 p-3 text-xs text-zinc-500">{T.noAttachments}</div>;
+  }
+
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {attachments.map((a, i) => {
+        const url = typeof a === "string" ? a : a.url;
+        const name = typeof a === "string" ? `${T.attachments} ${i + 1}` : (a.name || `${T.attachments} ${i + 1}`);
+        const type = typeof a === "string" ? "image/*" : (a.type || "");
+        const isImage = String(type).startsWith("image/") || String(url).startsWith("data:image/");
+
+        return (
+          <a key={a.id || i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border bg-white p-2 shadow-sm hover:shadow-md">
+            {isImage ? (
+              <img src={url} alt={name} className="h-28 w-full rounded-xl object-cover" />
+            ) : (
+              <div className="flex h-28 items-center justify-center rounded-xl bg-zinc-100 p-3 text-center text-xs font-bold text-zinc-600">
+                PDF / FILE<br />{name}
+              </div>
+            )}
+            <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{name}</div>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
   const service = isServiceRecord(inspection);
   const d = service ? 99999 : daysUntil(inspection.nextDate);
   const danger = !service && d <= 30;
+  const attachments = Array.isArray(inspection.attachments) ? inspection.attachments : [];
 
   return (
     <div className={`rounded-2xl border p-3 ${service ? "border-zinc-200 bg-zinc-50" : danger ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white"}`}>
@@ -1592,6 +1667,11 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
         {service && <>{T.workDone}: {inspection.notes || "—"}<br /></>}
         {!service && inspection.notes}
         {service && <div className="mt-2 rounded-xl border border-zinc-200 bg-white px-2 py-1 text-[11px] text-zinc-500">{T.noNextDateRequired}</div>}
+      </div>
+
+      <div className="mt-3">
+        <div className="mb-2 text-xs font-black text-zinc-500">{T.attachments}</div>
+        <AttachmentGallery attachments={attachments} T={T} />
       </div>
 
       {isAdmin && (
@@ -1628,7 +1708,11 @@ function InspectionModal({ T, onClose, onSave }) {
     nextDate: addMonths(today(), 6),
     result: "OK",
     notes: "",
+    attachments: [],
   });
+  const [preparing, setPreparing] = useState(false);
+  const cameraRef = useRef(null);
+  const uploadRef = useRef(null);
 
   const service = isServiceRecord(i);
 
@@ -1641,6 +1725,34 @@ function InspectionModal({ T, onClose, onSave }) {
       nextDate: willBeService ? "" : (i.nextDate || addMonths(today(), 6)),
       result: willBeService ? T.done : (i.result || "OK"),
     });
+  }
+
+  async function addAttachments(files) {
+    const selectedFiles = Array.from(files || []).slice(0, 6);
+    if (!selectedFiles.length) return;
+
+    setPreparing(true);
+    const prepared = [];
+
+    for (const file of selectedFiles) {
+      try {
+        const attachment = await prepareAttachmentFile(file);
+        if (attachment) prepared.push(attachment);
+      } catch (e) {
+        alert(T.attachmentPrepareError || T.preparePhotoError);
+        console.error(e);
+      }
+    }
+
+    setI((prev) => ({ ...prev, attachments: [...(prev.attachments || []), ...prepared] }));
+    setPreparing(false);
+  }
+
+  function removeAttachment(idOrIndex) {
+    setI((prev) => ({
+      ...prev,
+      attachments: (prev.attachments || []).filter((a, idx) => (a.id || idx) !== idOrIndex),
+    }));
   }
 
   return (
@@ -1656,6 +1768,48 @@ function InspectionModal({ T, onClose, onSave }) {
           <span className="mb-1 block text-xs font-bold text-zinc-500">{service ? T.workDone : T.notes}</span>
           <textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" />
         </label>
+
+        <div className="md:col-span-2 rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
+          <div className="mb-3 text-sm font-black text-zinc-800">{T.attachments}</div>
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{T.attachmentSavedHint}</div>
+
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple onChange={(e) => addAttachments(e.target.files)} className="hidden" />
+          <input ref={uploadRef} type="file" accept="image/*,application/pdf" multiple onChange={(e) => addAttachments(e.target.files)} className="hidden" />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button type="button" onClick={() => cameraRef.current?.click()} className="rounded-2xl bg-emerald-600 py-6 text-base font-black hover:bg-emerald-700">
+              {T.addAttachmentCamera}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => uploadRef.current?.click()} className="rounded-2xl py-6 text-base font-black">
+              {T.uploadAttachmentDevice}
+            </Button>
+          </div>
+
+          {preparing && <div className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-zinc-600">{T.saving}</div>}
+
+          {(i.attachments || []).length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {(i.attachments || []).map((a, idx) => {
+                const isImage = String(a.type || "").startsWith("image/") || String(a.url || "").startsWith("data:image/");
+                return (
+                  <div key={a.id || idx} className="relative overflow-hidden rounded-2xl border bg-white p-2 shadow-sm">
+                    {isImage ? (
+                      <img src={a.url} alt={a.name} className="h-32 w-full rounded-xl object-cover" />
+                    ) : (
+                      <div className="flex h-32 items-center justify-center rounded-xl bg-zinc-100 p-3 text-center text-xs font-bold text-zinc-600">PDF / FILE<br />{a.name}</div>
+                    )}
+                    <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{a.name}</div>
+                    <button type="button" onClick={() => removeAttachment(a.id || idx)} className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-1 text-xs font-bold text-white shadow">
+                      {T.remove}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-center text-sm text-zinc-500">{T.noAttachments}</div>
+          )}
+        </div>
       </div>
       <ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} />
     </Modal>
