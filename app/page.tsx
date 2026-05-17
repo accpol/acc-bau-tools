@@ -563,6 +563,76 @@ const defaultSettings = {
   },
 };
 
+function normalizeSettings(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const people = Array.isArray(source.people) && source.people.length ? source.people : defaultSettings.people;
+  const projects = Array.isArray(source.projects) && source.projects.length ? source.projects : defaultSettings.projects;
+  const categories = Array.isArray(source.categories) && source.categories.length ? source.categories : defaultSettings.categories;
+  const pins = source.pins && typeof source.pins === "object" && Object.keys(source.pins).length ? source.pins : defaultSettings.pins;
+  const roles = source.roles && typeof source.roles === "object" && Object.keys(source.roles).length ? source.roles : defaultSettings.roles;
+
+  return {
+    ...source,
+    people,
+    projects,
+    categories,
+    pins,
+    roles,
+    updatedAt: source.updatedAt || "",
+  };
+}
+
+function settingsComparable(value) {
+  const normalized = normalizeSettings(value);
+  const { updatedAt, ...rest } = normalized;
+  return JSON.stringify(rest);
+}
+
+function settingsDifferent(a, b) {
+  return settingsComparable(a) !== settingsComparable(b);
+}
+
+function pickBestSettings(localSettings, serverSettings) {
+  const local = normalizeSettings(localSettings);
+  const server = serverSettings ? normalizeSettings(serverSettings) : null;
+
+  if (!server) return { settings: local, shouldPushLocal: true };
+
+  const localTs = Date.parse(local.updatedAt || "") || 0;
+  const serverTs = Date.parse(server.updatedAt || "") || 0;
+
+  if (localTs && serverTs) {
+    return localTs > serverTs
+      ? { settings: local, shouldPushLocal: true }
+      : { settings: server, shouldPushLocal: false };
+  }
+
+  if (localTs && !serverTs) return { settings: local, shouldPushLocal: true };
+
+  if (!serverTs && settingsDifferent(local, defaultSettings) && !settingsDifferent(server, defaultSettings)) {
+    return { settings: local, shouldPushLocal: true };
+  }
+
+  return { settings: server, shouldPushLocal: false };
+}
+
+async function persistSettingsEverywhere(nextSettings, setSettingsCallback) {
+  const normalized = normalizeSettings({
+    ...nextSettings,
+    updatedAt: nextSettings.updatedAt || new Date().toISOString(),
+  });
+
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized));
+  if (setSettingsCallback) setSettingsCallback(normalized);
+
+  if (supabase) {
+    const { error } = await supabase.from("settings").upsert({ id: "main", data: normalized });
+    if (error) throw error;
+  }
+
+  return normalized;
+}
+
 const defaultTools = [
   {
     id: "ACC-HLM-ELT-0001",
@@ -899,12 +969,13 @@ export default function App() {
       setShowClaim(true);
     }
 
+    const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
+
     if (!supabase) {
       const t = load(STORAGE_KEY, []);
-      const s = load(SETTINGS_KEY, defaultSettings);
       const h = load(HISTORY_KEY, []);
       setTools(t);
-      setSettings(s);
+      setSettings(localSettings);
       setHistory(h);
       setSelected(t[0] || null);
       setDbStatus("local");
@@ -924,15 +995,20 @@ export default function App() {
         ...tool,
         inspections: normalizeInspectionsList(tool.inspections),
       }));
-      let loadedSettings = settingsRes.data?.data || null;
+      let serverSettings = settingsRes.data?.data || null;
       let loadedHistory = (historyRes.data || [])
         .map((row) => ({ id: row.id, ...(row.data || {}) }))
         .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
-      if (!loadedSettings) {
-        await supabase.from("settings").upsert({ id: "main", data: defaultSettings });
-        loadedSettings = defaultSettings;
+      const pickedSettings = pickBestSettings(localSettings, serverSettings);
+      let loadedSettings = pickedSettings.settings;
+
+      if (pickedSettings.shouldPushLocal) {
+        const { error } = await supabase.from("settings").upsert({ id: "main", data: loadedSettings });
+        if (error) console.error("settings sync error", error);
       }
+
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(loadedSettings));
 
       // Nie dodajemy automatycznie demo-narzędzi, gdy baza jest pusta.
       // Inaczej po usunięciu wszystkich narzędzi wracałyby po odświeżeniu.
@@ -948,10 +1024,11 @@ export default function App() {
       setDbLoaded(true);
     } catch (e) {
       console.error(e);
-      setTools([]);
-      setSettings(defaultSettings);
-      setHistory([]);
-      setSelected(null);
+      const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
+      setTools(load(STORAGE_KEY, []));
+      setSettings(localSettings);
+      setHistory(load(HISTORY_KEY, []));
+      setSelected(load(STORAGE_KEY, [])[0] || null);
       setDbStatus("error");
       setDbLoaded(true);
     }
@@ -1984,18 +2061,54 @@ function SettingsModal({ T, settings, setSettings, onClose }) {
   const [categories, setCategories] = useState((settings.categories || []).join(NL));
   const [pins, setPins] = useState(Object.entries(settings.pins || {}).map(([k, v]) => `${k}:${v}`).join(NL));
   const [roles, setRoles] = useState(Object.entries(settings.roles || {}).map(([k, v]) => `${k}:${v}`).join(NL));
+  const [saving, setSaving] = useState(false);
   const clean = (text) => text.split(NL).map((x) => x.trim()).filter(Boolean);
-  function save() {
-    const pinObj = {};
-    clean(pins).forEach((line) => { const [name, pin] = line.split(":"); if (name && pin) pinObj[name.trim()] = pin.trim(); });
-    const roleObj = {};
-    clean(roles).forEach((line) => { const [name, role] = line.split(":"); if (name && role) roleObj[name.trim()] = role.trim(); });
-    const nextSettings = { people: clean(people), projects: clean(projects), categories: clean(categories), pins: pinObj, roles: roleObj };
-    setSettings(nextSettings);
-    if (supabase) supabase.from("settings").upsert({ id: "main", data: nextSettings });
-    onClose();
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+
+    try {
+      const pinObj = {};
+      clean(pins).forEach((line) => {
+        const index = line.indexOf(":");
+        if (index > 0) {
+          const name = line.slice(0, index).trim();
+          const pin = line.slice(index + 1).trim();
+          if (name && pin) pinObj[name] = pin;
+        }
+      });
+
+      const roleObj = {};
+      clean(roles).forEach((line) => {
+        const index = line.indexOf(":");
+        if (index > 0) {
+          const name = line.slice(0, index).trim();
+          const role = line.slice(index + 1).trim();
+          if (name && role) roleObj[name] = role;
+        }
+      });
+
+      const nextSettings = normalizeSettings({
+        people: clean(people),
+        projects: clean(projects),
+        categories: clean(categories),
+        pins: pinObj,
+        roles: roleObj,
+        updatedAt: new Date().toISOString(),
+      });
+
+      await persistSettingsEverywhere(nextSettings, setSettings);
+      onClose();
+    } catch (e) {
+      console.error("settings save error", e);
+      alert("Nie udało się zapisać ustawień w Supabase: " + (e?.message || e) + "\n\nUstawienia zapisano lokalnie, ale sprawdź tabelę settings / RLS w Supabase.");
+    } finally {
+      setSaving(false);
+    }
   }
-  return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><ModalFooter T={T} onClose={onClose} onSave={save} /></Modal>;
+
+  return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><ModalFooter T={T} onClose={onClose} onSave={save} saving={saving} /></Modal>;
 }
 
 function TransferModal({ T, code, tool, onClose }) {
@@ -2280,7 +2393,7 @@ function ClaimModal({ T, initialCode, onClose, onClaim }) {
 
 function Modal({ children, wide }) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className={`max-h-[92vh] w-full overflow-auto rounded-3xl bg-white shadow-2xl ${wide ? "max-w-5xl" : "max-w-3xl"}`}>{children}</motion.div></div>; }
 function ModalHeader({ title, subtitle, onClose }) { return <div className="flex items-center justify-between border-b px-6 py-4"><div><h2 className="text-lg font-bold">{title}</h2>{subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}</div><Button variant="ghost" onClick={onClose}><X /></Button></div>; }
-function ModalFooter({ T, onClose, onSave }) { return <div className="flex justify-end gap-2 border-t px-6 py-4"><Button variant="outline" onClick={onClose}>{T.cancel}</Button><Button onClick={onSave} className="bg-zinc-950 hover:bg-zinc-800"><Save className="mr-2 h-4 w-4" /> {T.save}</Button></div>; }
+function ModalFooter({ T, onClose, onSave, saving = false }) { return <div className="flex justify-end gap-2 border-t px-6 py-4"><Button variant="outline" onClick={onClose} disabled={saving}>{T.cancel}</Button><Button onClick={onSave} disabled={saving} className="bg-zinc-950 hover:bg-zinc-800"><Save className="mr-2 h-4 w-4" /> {saving ? (T.saving || "Zapisywanie...") : T.save}</Button></div>; }
 function TextList({ title, value, setValue }) { return <label><span className="mb-2 block text-sm font-bold">{title}</span><textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-72 w-full rounded-xl border p-3 text-sm" /></label>; }
 function InfoBox({ T }) { return <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]"><CardContent className="p-4 sm:p-6"><div className="flex items-center gap-2 font-black"><ShieldCheck className="h-5 w-5" /> {T.ruleTitle}</div><ol className="mt-3 space-y-2 text-sm text-zinc-600"><li>1. {T.rule1}</li><li>2. {T.rule2}</li><li>3. {T.rule3}</li><li>4. {T.rule4}</li></ol></CardContent></Card>; }
 function SectionTitle({ icon, title }) { return <div className="mb-2 mt-6 flex items-center gap-2 font-black">{React.cloneElement(icon, { className: "h-4 w-4" })} {title}</div>; }
