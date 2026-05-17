@@ -17,7 +17,6 @@ import {
   PackageX,
   Plus,
   Printer,
-  RotateCcw,
   Save,
   ScanLine,
   Search,
@@ -906,7 +905,7 @@ export default function App() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.18),transparent_34%),linear-gradient(135deg,#2f302d_0%,#474944_42%,#d7d2c8_100%)] text-zinc-950">
       {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">Ładowanie bazy danych...</div></div></div>}
       {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">Uwaga: brak połączenia z Supabase. Aplikacja działa lokalnie.</div></div>}
-      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onDemo={() => { setTools(defaultTools); setSelected(defaultTools[0]); }} onAdd={openNewTool} />
+      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -964,7 +963,7 @@ export default function App() {
                     return;
                   }
                 }
-              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} />}
+              }} onTransfer={createTransfer} onReturn={returnTool} onInspection={() => setShowInspection(true)} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -1012,7 +1011,7 @@ function LanguageSelect({ lang, setLang, dark = false }) {
   );
 }
 
-function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHistory, onExcel, onSettings, onDemo, onAdd }) {
+function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHistory, onExcel, onSettings, onAdd }) {
   return (
     <header className="border-b border-white/10 bg-zinc-950 text-white shadow-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -1054,11 +1053,6 @@ function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHi
             </Button>
           )}
 
-          {isAdmin && (
-            <Button onClick={onDemo} className="rounded-xl bg-white text-zinc-950 hover:bg-zinc-100">
-              <RotateCcw className="mr-2 h-4 w-4" /> {T.demo}
-            </Button>
-          )}
 
           {isAdmin && (
             <Button onClick={onAdd} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500">
@@ -1209,7 +1203,7 @@ function ToolRow({ tool, active, onClick, T }) {
   );
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint, onPrintHistory }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onInspection, onPrint, onPrintHistory, onOpenHistory }) {
   const state = inspectionStatus(tool, T);
 
   return (
@@ -1251,7 +1245,32 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
         <div className="grid gap-3 md:grid-cols-2">{inspections(tool).map((i) => <InspectionCard key={i.id} inspection={i} T={T} />)}{!inspections(tool).length && <p className="rounded-2xl border bg-zinc-50 p-3 text-sm text-zinc-500">{T.noInspections}</p>}</div>
 
         <SectionTitle icon={<History />} title={T.history} />
-        <div className="max-h-52 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">{history.map((h) => <div key={h.id} className="rounded-xl bg-white p-2 text-xs"><b>{h.action}</b> — {h.date}<br /><span className="text-zinc-500">{h.details}</span><br /><span className="text-zinc-400">Użytkownik: {h.user}</span></div>)}{!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}</div>
+        <div className="max-h-64 space-y-2 overflow-auto rounded-2xl border bg-zinc-50 p-3">
+          {history.map((h) => {
+            const photoCount = (h.photosFromGiver?.length || 0) + (h.photosFromReceiver?.length || 0);
+            return (
+              <button
+                type="button"
+                key={h.id}
+                onClick={() => onOpenHistory?.(h)}
+                className="block w-full rounded-xl bg-white p-3 text-left text-xs shadow-sm transition hover:bg-orange-50 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <b>{h.action}</b> — {h.date}<br />
+                    <span className="text-zinc-600">{h.details}</span><br />
+                    <span className="text-zinc-400">Od: {h.from || "—"} • Do: {h.to || "—"}</span>
+                  </div>
+                  <div className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${photoCount ? "bg-orange-100 text-orange-700" : "bg-zinc-100 text-zinc-400"}`}>
+                    {photoCount ? `${photoCount} zdjęć` : "brak zdjęć"}
+                  </div>
+                </div>
+                {photoCount > 0 && <div className="mt-2 text-[11px] font-bold text-orange-700">Kliknij, aby zobaczyć zdjęcia</div>}
+              </button>
+            );
+          })}
+          {!history.length && <p className="text-sm text-zinc-500">{T.noHistory}</p>}
+        </div>
       </CardContent>
     </Card>
   );
