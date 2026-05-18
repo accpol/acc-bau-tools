@@ -1511,8 +1511,8 @@ export default function App() {
 
   function printLabel(tool) {
     const url = publicLink(tool.id);
-    // Naklejka jest stała: nie drukujemy statusu ani terminu przeglądu,
-    // bo aktualne dane są widoczne po zeskanowaniu kodu QR.
+    // Stała naklejka Zebra 76 x 51 mm.
+    // Nie drukujemy statusu ani przeglądów, bo aktualny stan jest zawsze po QR.
 
     const html = `<!doctype html>
 <html>
@@ -1544,25 +1544,43 @@ export default function App() {
       padding: 3mm;
       display: flex;
       gap: 3mm;
-      align-items: center;
+      align-items: stretch;
       border: 0.35mm solid #111;
       page-break-after: always;
     }
+    .left {
+      width: 35mm;
+      flex: 0 0 35mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+    }
     .qrBox {
-      width: 32mm;
-      height: 32mm;
-      flex: 0 0 32mm;
+      width: 33mm;
+      height: 33mm;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 0.25mm solid #111;
-      border-radius: 1.5mm;
+      border-radius: 1.6mm;
       padding: 1mm;
     }
     .qrBox img {
-      width: 29.5mm;
-      height: 29.5mm;
+      width: 30.5mm;
+      height: 30.5mm;
       display: block;
+    }
+    .scan {
+      width: 35mm;
+      margin-top: 1.3mm;
+      text-align: center;
+      font-size: 7.8pt;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 0.45pt;
+      white-space: nowrap;
     }
     .info {
       flex: 1;
@@ -1570,91 +1588,64 @@ export default function App() {
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
       overflow: hidden;
     }
     .brand {
-      font-size: 9pt;
+      font-size: 10pt;
       line-height: 1;
       font-weight: 900;
-      letter-spacing: 0.4pt;
+      letter-spacing: 0.5pt;
+      white-space: nowrap;
     }
     .hse {
-      margin-top: 0.8mm;
+      margin-top: 1mm;
       display: inline-block;
       width: fit-content;
       border: 0.25mm solid #111;
       border-radius: 1mm;
-      padding: 0.4mm 1.2mm;
-      font-size: 6pt;
+      padding: 0.5mm 1.4mm;
+      font-size: 6.7pt;
       line-height: 1;
       font-weight: 900;
-      letter-spacing: 0.3pt;
+      letter-spacing: 0.35pt;
+      white-space: nowrap;
     }
     .name {
-      margin-top: 1.6mm;
-      font-size: 11pt;
-      line-height: 1.05;
+      margin-top: 2mm;
+      font-size: 12pt;
+      line-height: 1.02;
       font-weight: 900;
-      max-height: 12mm;
+      max-height: 15mm;
       overflow: hidden;
       word-break: break-word;
     }
     .line {
-      font-size: 6.8pt;
-      line-height: 1.15;
-      font-weight: 700;
+      margin-top: 1.3mm;
+      font-size: 7pt;
+      line-height: 1.12;
+      font-weight: 800;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .small {
-      font-size: 5.7pt;
-      line-height: 1.1;
-      color: #333;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .status {
-      margin-top: 1mm;
-      display: inline-block;
-      width: fit-content;
-      max-width: 100%;
-      border: 0.25mm solid #111;
-      border-radius: 1mm;
-      padding: 0.5mm 1mm;
-      font-size: 6.3pt;
-      line-height: 1;
-      font-weight: 900;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .alarm {
       margin-top: 0.8mm;
-      display: inline-block;
-      width: fit-content;
-      max-width: 100%;
-      border: 0.25mm solid #111;
-      background: #111;
-      color: #fff;
-      border-radius: 1mm;
-      padding: 0.5mm 1mm;
-      font-size: 5.8pt;
-      line-height: 1;
-      font-weight: 900;
+      font-size: 6.2pt;
+      line-height: 1.05;
+      color: #333;
+      font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .url {
-      font-size: 4.4pt;
-      color: #555;
+    .hint {
+      margin-top: 2mm;
+      font-size: 5.9pt;
       line-height: 1.05;
-      max-height: 5mm;
-      overflow: hidden;
-      word-break: break-all;
+      font-weight: 900;
+      letter-spacing: 0.2pt;
+      color: #111;
     }
     @media print {
       html,
@@ -1670,20 +1661,20 @@ export default function App() {
 </head>
 <body>
   <div class="label">
-    <div class="qrBox">
-      <img src="${qrUrl(url)}" />
+    <div class="left">
+      <div class="qrBox">
+        <img src="${qrUrl(url)}" />
+      </div>
+      <div class="scan">SCAN FOR STATUS</div>
     </div>
     <div class="info">
-      <div>
-        <div class="brand">ACC BAU</div>
-        <div class="hse">HSE QR</div>
-        <div class="name">${tool.name || "—"}</div>
-        <div class="line">ID: ${tool.id || "—"}</div>
-        <div class="line">SN: ${tool.serial || "—"}</div>
-        <div class="small">${tool.brand || ""} ${tool.model || ""}</div>
-        <div class="small" style="margin-top:1.2mm;font-weight:900;letter-spacing:0.2pt;">SCAN QR FOR CURRENT STATUS</div>
-      </div>
-      <div class="url">${url}</div>
+      <div class="brand">ACC BAU</div>
+      <div class="hse">HSE QR</div>
+      <div class="name">${tool.name || "—"}</div>
+      <div class="line">ID: ${tool.id || "—"}</div>
+      <div class="line">SN: ${tool.serial || "—"}</div>
+      <div class="small">${tool.brand || ""} ${tool.model || ""}</div>
+      <div class="hint">QR pokazuje aktualny status, przegląd i historię.</div>
     </div>
   </div>
   <script>
