@@ -139,6 +139,8 @@ const I18N = {
     inDays: "za",
     noReview: "Brak przeglądu",
     reviewsOk: "Przeglądy OK",
+    inspectionNotRequired: "Nie wymaga przeglądu",
+    reviewsOkPermanent: "Przegląd OK — bezterminowo",
     days: "dni",
     printHistory: "Drukuj historię",
     printAllHistory: "Drukuj całą historię",
@@ -320,6 +322,8 @@ const I18N = {
     inDays: "in",
     noReview: "No inspection",
     reviewsOk: "Inspections OK",
+    inspectionNotRequired: "Inspection not required",
+    reviewsOkPermanent: "Inspection OK — no expiry",
     days: "days",
     printHistory: "Print history",
     printAllHistory: "Print full history",
@@ -501,6 +505,8 @@ const I18N = {
     inDays: "in",
     noReview: "Keine Prüfung",
     reviewsOk: "Prüfungen OK",
+    inspectionNotRequired: "Keine Prüfung erforderlich",
+    reviewsOkPermanent: "Prüfung OK — unbefristet",
     days: "Tage",
     printHistory: "Historie drucken",
     printAllHistory: "Gesamte Historie drucken",
@@ -877,6 +883,7 @@ function normalizeInspectionItem(item) {
   return {
     ...item,
     id: item.id || crypto.randomUUID?.() || String(Date.now() + Math.random()),
+    noInspectionRequired: !!(item.noInspectionRequired || item.inspectionNotRequired || item.notRequired),
     kind: isServiceRecord(item) ? "service" : (item.kind || "inspection"),
     attachments,
   };
@@ -890,7 +897,16 @@ function inspections(tool) {
   return normalizeInspectionsList(tool?.inspections);
 }
 
+function isInspectionNotRequired(item) {
+  return !!(item?.noInspectionRequired || item?.inspectionNotRequired || item?.notRequired);
+}
+
+function hasInspectionNotRequired(tool) {
+  return inspections(tool).some((item) => !isServiceRecord(item) && isInspectionNotRequired(item));
+}
+
 function isServiceRecord(item) {
+  if (isInspectionNotRequired(item)) return false;
   return item?.kind === "service" || ["Naprawa / Serwis", "Naprawa", "Serwis"].includes(item?.type) || (!item?.nextDate && item?.doneDate);
 }
 
@@ -902,6 +918,7 @@ function urgentInspection(tool) {
 
 function inspectionStatus(tool, T = I18N.pl) {
   const item = urgentInspection(tool);
+  if (!item && hasInspectionNotRequired(tool)) return { danger: false, label: T.reviewsOkPermanent || T.reviewsOk, cls: "bg-green-100 text-green-700 border-green-200" };
   if (!item) return { danger: true, label: T.noReview, cls: "bg-red-100 text-red-700 border-red-200" };
   const d = daysUntil(item.nextDate);
   if (d < 0) return { danger: true, label: `${item.type} ${T.overdue}`, cls: "bg-red-100 text-red-700 border-red-200" };
@@ -1248,9 +1265,11 @@ export default function App() {
     const normalized = normalizeInspectionItem({
       ...inspection,
       id: inspection.id || crypto.randomUUID?.() || String(Date.now()),
+      noInspectionRequired: !!inspection.noInspectionRequired,
       kind: isServiceRecord(inspection) ? "service" : "inspection",
-      result: isServiceRecord(inspection) ? (inspection.result || T.done) : inspection.result,
-      nextDate: isServiceRecord(inspection) ? "" : inspection.nextDate,
+      result: isServiceRecord(inspection) ? (inspection.result || T.done) : (inspection.noInspectionRequired ? (T.ok || "OK") : inspection.result),
+      doneDate: inspection.noInspectionRequired ? "" : inspection.doneDate,
+      nextDate: (isServiceRecord(inspection) || inspection.noInspectionRequired) ? "" : inspection.nextDate,
       attachments: Array.isArray(inspection.attachments)
         ? inspection.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean)
         : [],
@@ -1265,7 +1284,9 @@ export default function App() {
 
     const details = isServiceRecord(normalized)
       ? `${normalized.type}: ${normalized.doneDate} — ${normalized.notes || T.noNextDateRequired}`
-      : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
+      : isInspectionNotRequired(normalized)
+        ? `${normalized.type}: ${T.inspectionNotRequired || "Nie wymaga przeglądu"}`
+        : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
 
     updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details, { historyExtra: { attachments: normalized.attachments || [] } });
     setShowInspection(false);
@@ -1490,10 +1511,8 @@ export default function App() {
 
   function printLabel(tool) {
     const url = publicLink(tool.id);
-    const u = urgentInspection(tool);
-    const inspectionText = u?.nextDate ? `${u.type}: ${u.nextDate}` : T.reviewsOk || "OK";
-    const statusText = tool.status === "Awaria" ? (T.failureStatus || "Awaria") : (tool.status || "—");
-    const qrIssueText = tool.qrIssue ? (T.qrAlarmStatus || "QR nieczytelne") : "";
+    // Naklejka jest stała: nie drukujemy statusu ani terminu przeglądu,
+    // bo aktualne dane są widoczne po zeskanowaniu kodu QR.
 
     const html = `<!doctype html>
 <html>
@@ -1662,8 +1681,7 @@ export default function App() {
         <div class="line">ID: ${tool.id || "—"}</div>
         <div class="line">SN: ${tool.serial || "—"}</div>
         <div class="small">${tool.brand || ""} ${tool.model || ""}</div>
-        <div class="status">${statusText} • ${inspectionText}</div>
-        ${qrIssueText ? `<div class="alarm">${qrIssueText}</div>` : ""}
+        <div class="small" style="margin-top:1.2mm;font-weight:900;letter-spacing:0.2pt;">SCAN QR FOR CURRENT STATUS</div>
       </div>
       <div class="url">${url}</div>
     </div>
@@ -2172,8 +2190,9 @@ function AttachmentGallery({ attachments = [], T, compact = false }) {
 
 function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
   const service = isServiceRecord(inspection);
-  const d = service ? 99999 : daysUntil(inspection.nextDate);
-  const danger = !service && d <= 30;
+  const noRequired = isInspectionNotRequired(inspection);
+  const d = service || noRequired ? 99999 : daysUntil(inspection.nextDate);
+  const danger = !service && !noRequired && d <= 30;
   const attachments = Array.isArray(inspection.attachments) ? inspection.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean) : [];
 
   return (
@@ -2182,11 +2201,13 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
         <div className="min-w-0">
           <div className="truncate font-black">{inspection.type}</div>
           <div className="mt-1 text-xs text-zinc-600">
-            {T.done}: {inspection.doneDate || "—"}
-            {!service && <> • {T.nextInspection}: {inspection.nextDate || "—"}</>}
+            {noRequired ? (T.inspectionNotRequired || "Nie wymaga przeglądu") : (<>{T.done}: {inspection.doneDate || "—"}</>)}
+            {!service && !noRequired && <> • {T.nextInspection}: {inspection.nextDate || "—"}</>}
           </div>
         </div>
-        {service ? (
+        {noRequired ? (
+          <Badge cls="bg-green-100 text-green-700 border-green-200">{T.ok}</Badge>
+        ) : service ? (
           <Badge cls="bg-zinc-100 text-zinc-700 border-zinc-200">{T.serviceRecord}</Badge>
         ) : danger ? (
           <Badge cls="bg-red-600 text-white border-red-600">{T.warning}</Badge>
@@ -2196,7 +2217,9 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
       </div>
 
       <div className="mt-2 line-clamp-3 text-xs text-zinc-600">
-        {service ? (
+        {noRequired ? (
+          <>{T.reviewsOkPermanent || T.reviewsOk}{inspection.notes ? <> • {inspection.notes}</> : null}</>
+        ) : service ? (
           <>{T.workDone}: {inspection.notes || "—"}</>
         ) : (
           <>
@@ -2247,6 +2270,7 @@ function InspectionModal({ T, onClose, onSave }) {
     nextDate: addMonths(today(), 6),
     result: "OK",
     notes: "",
+    noInspectionRequired: false,
     attachments: [],
   });
   const [preparing, setPreparing] = useState(false);
@@ -2254,6 +2278,7 @@ function InspectionModal({ T, onClose, onSave }) {
   const uploadRef = useRef(null);
 
   const service = isServiceRecord(i);
+  const noRequired = !!i.noInspectionRequired;
 
   function changeType(type) {
     const willBeService = ["Naprawa / Serwis", "Naprawa", "Serwis"].includes(type);
@@ -2261,9 +2286,22 @@ function InspectionModal({ T, onClose, onSave }) {
       ...i,
       type,
       kind: willBeService ? "service" : "inspection",
-      nextDate: willBeService ? "" : (i.nextDate || addMonths(today(), 6)),
+      noInspectionRequired: willBeService ? false : !!i.noInspectionRequired,
+      nextDate: willBeService || i.noInspectionRequired ? "" : (i.nextDate || addMonths(today(), 6)),
+      doneDate: willBeService || i.noInspectionRequired ? (willBeService ? (i.doneDate || today()) : "") : (i.doneDate || today()),
       result: willBeService ? T.done : (i.result || "OK"),
     });
+  }
+
+  function toggleNoInspectionRequired(checked) {
+    setI((prev) => ({
+      ...prev,
+      noInspectionRequired: checked,
+      kind: checked ? "inspection" : prev.kind,
+      doneDate: checked ? "" : (prev.doneDate || today()),
+      nextDate: checked ? "" : (prev.nextDate || addMonths(today(), 6)),
+      result: checked ? (T.ok || "OK") : (prev.result || "OK"),
+    }));
   }
 
   async function addAttachments(files) {
@@ -2304,10 +2342,22 @@ function InspectionModal({ T, onClose, onSave }) {
       <ModalHeader title={T.addInspection} onClose={onClose} />
       <div className="grid gap-4 p-6 md:grid-cols-2">
         <FormSelect label={T.type} value={i.type} options={inspectionTypes} onChange={changeType} />
-        {!service && <FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} />}
-        <Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} />
-        {!service && <Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} />}
+        {!service && (
+          <label className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-black text-emerald-800">
+            <input
+              type="checkbox"
+              checked={noRequired}
+              onChange={(e) => toggleNoInspectionRequired(e.target.checked)}
+              className="h-5 w-5"
+            />
+            {T.inspectionNotRequired || "Nie wymaga przeglądu"}
+          </label>
+        )}
+        {!service && !noRequired && <FormSelect label={T.result} value={i.result} options={["OK", "Do sprawdzenia", "Naprawa wymagana", "Nie dopuszczone"]} onChange={(v) => setI({ ...i, result: v })} />}
+        {!noRequired && <Field type="date" label={T.done} value={i.doneDate} onChange={(v) => setI({ ...i, doneDate: v })} />}
+        {!service && !noRequired && <Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} />}
         {service && <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">{T.noNextDateRequired}</div>}
+        {!service && noRequired && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">{T.reviewsOkPermanent || T.reviewsOk}</div>}
         <label className="block md:col-span-2">
           <span className="mb-1 block text-xs font-bold text-zinc-500">{service ? T.workDone : T.notes}</span>
           <textarea value={i.notes} onChange={(e) => setI({ ...i, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" />
