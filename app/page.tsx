@@ -981,64 +981,6 @@ function attachmentCountText(count, T) {
   return `${count} ${T.attachments || T.photos}`;
 }
 
-function isMobileBrowser() {
-  if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
-}
-
-function lightAttachmentForMobile(att, index = 0) {
-  const a = normalizeAttachment(att, index);
-  if (!a) return null;
-  return {
-    id: a.id,
-    name: a.name,
-    type: a.type,
-    url: "",
-    mobileSkipped: true,
-  };
-}
-
-function stripHeavyToolForMobile(tool) {
-  if (!tool) return tool;
-  return {
-    ...tool,
-    photo: "",
-    inspections: normalizeInspectionsList(tool.inspections).map((i) => ({
-      ...i,
-      attachments: Array.isArray(i.attachments)
-        ? i.attachments.map((a, idx) => lightAttachmentForMobile(a, idx)).filter(Boolean)
-        : [],
-    })),
-  };
-}
-
-function stripHeavyHistoryForMobile(item) {
-  if (!item) return item;
-  return {
-    ...item,
-    photosFromGiver: [],
-    photosFromReceiver: [],
-    attachments: Array.isArray(item.attachments)
-      ? item.attachments.map((a, idx) => lightAttachmentForMobile(a, idx)).filter(Boolean)
-      : [],
-    photos: [],
-    inspectionAttachments: [],
-    mobileLight: true,
-  };
-}
-
-function prepareToolsForRuntime(list) {
-  const normalized = Array.isArray(list)
-    ? list.map((tool) => ({ ...tool, inspections: normalizeInspectionsList(tool.inspections) }))
-    : [];
-  return isMobileBrowser() ? normalized.map(stripHeavyToolForMobile) : normalized;
-}
-
-function prepareHistoryForRuntime(list) {
-  const normalized = Array.isArray(list) ? list : [];
-  const limited = isMobileBrowser() ? normalized.slice(0, 40) : normalized;
-  return isMobileBrowser() ? limited.map(stripHeavyHistoryForMobile) : limited;
-}
 
 export default function App() {
   const [tools, setTools] = useState([]);
@@ -1092,8 +1034,8 @@ export default function App() {
     const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
 
     if (!supabase) {
-      const t = prepareToolsForRuntime(load(STORAGE_KEY, []));
-      const h = prepareHistoryForRuntime(load(HISTORY_KEY, []));
+      const t = load(STORAGE_KEY, []);
+      const h = load(HISTORY_KEY, []);
       setTools(t);
       setSettings(localSettings);
       setHistory(h);
@@ -1108,14 +1050,17 @@ export default function App() {
       const [toolsRes, settingsRes, historyRes] = await Promise.all([
         supabase.from("tools").select("id,data").order("id"),
         supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
-        supabase.from("history").select("id,data").limit(isMobileBrowser() ? 40 : 250),
+        supabase.from("history").select("id,data").limit(250),
       ]);
 
-      let loadedTools = prepareToolsForRuntime((toolsRes.data || []).map((row) => row.data).filter(Boolean));
+      let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
+        ...tool,
+        inspections: normalizeInspectionsList(tool.inspections),
+      }));
       let serverSettings = settingsRes.data?.data || null;
-      let loadedHistory = prepareHistoryForRuntime((historyRes.data || [])
+      let loadedHistory = (historyRes.data || [])
         .map((row) => ({ id: row.id, ...(row.data || {}) }))
-        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))));
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
       const pickedSettings = pickBestSettings(localSettings, serverSettings);
       let loadedSettings = pickedSettings.settings;
@@ -1142,12 +1087,10 @@ export default function App() {
     } catch (e) {
       console.error(e);
       const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
-      const localTools = prepareToolsForRuntime(load(STORAGE_KEY, []));
-      const localHistory = prepareHistoryForRuntime(load(HISTORY_KEY, []));
-      setTools(localTools);
+      setTools(load(STORAGE_KEY, []));
       setSettings(localSettings);
-      setHistory(localHistory);
-      setSelected(localTools[0] || null);
+      setHistory(load(HISTORY_KEY, []));
+      setSelected(load(STORAGE_KEY, [])[0] || null);
       setDbStatus("error");
       setDbLoaded(true);
     }
