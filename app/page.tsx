@@ -1083,6 +1083,8 @@ export default function App() {
   const [publicToolId, setPublicToolId] = useState("");
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbStatus, setDbStatus] = useState("local");
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const T = I18N[lang] || I18N.pl;
 
@@ -1107,12 +1109,15 @@ export default function App() {
 
     const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
 
+    const mobile = isMobileDevice();
+
     if (!supabase) {
       const t = load(STORAGE_KEY, []);
-      const h = load(HISTORY_KEY, []);
+      const h = mobile ? [] : load(HISTORY_KEY, []);
       setTools(t);
       setSettings(localSettings);
       setHistory(h);
+      setHistoryLoaded(!mobile);
       setSelected(t[0] || null);
       setDbStatus("local");
       setDbLoaded(true);
@@ -1124,7 +1129,7 @@ export default function App() {
       const [toolsRes, settingsRes, historyRes] = await Promise.all([
         supabase.from("tools").select("id,data").order("id"),
         supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
-        supabase.from("history").select("id,data").limit(250),
+        mobile ? Promise.resolve({ data: [], error: null }) : supabase.from("history").select("id,data").limit(250),
       ]);
 
       let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
@@ -1155,6 +1160,7 @@ export default function App() {
       setTools(loadedTools);
       setSettings(loadedSettings);
       setHistory(loadedHistory);
+      setHistoryLoaded(!mobile);
       setSelected(loadedTools[0] || null);
       setDbStatus("online");
       setDbLoaded(true);
@@ -1163,7 +1169,8 @@ export default function App() {
       const localSettings = normalizeSettings(load(SETTINGS_KEY, defaultSettings));
       setTools(load(STORAGE_KEY, []));
       setSettings(localSettings);
-      setHistory(load(HISTORY_KEY, []));
+      setHistory(mobile ? [] : load(HISTORY_KEY, []));
+      setHistoryLoaded(!mobile);
       setSelected(load(STORAGE_KEY, [])[0] || null);
       setDbStatus("error");
       setDbLoaded(true);
@@ -1171,11 +1178,11 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!dbLoaded) return;
+    if (!dbLoaded || isMobileDevice()) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
   }, [tools, dbLoaded]);
   useEffect(() => {
-    if (!dbLoaded) return;
+    if (!dbLoaded || isMobileDevice()) return;
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history, dbLoaded]);
   useEffect(() => {
@@ -1531,6 +1538,43 @@ export default function App() {
   }
 
 
+  async function loadHistoryFromDb({ force = false } = {}) {
+    if (historyLoading) return;
+    if (historyLoaded && !force) return;
+
+    if (!supabase) {
+      const localHistory = load(HISTORY_KEY, []);
+      setHistory(localHistory);
+      setHistoryLoaded(true);
+      return;
+    }
+
+    try {
+      setHistoryLoading(true);
+      const limit = isMobileDevice() ? 80 : 500;
+      const { data, error } = await supabase.from("history").select("id,data").limit(limit);
+      if (error) throw error;
+
+      const loadedHistory = (data || [])
+        .map((row) => ({ id: row.id, ...(row.data || {}) }))
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
+      setHistory(loadedHistory);
+      setHistoryLoaded(true);
+    } catch (e) {
+      console.error("history load error", e);
+      alert("Nie udało się wczytać historii: " + (e?.message || e));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function openHistoryModal() {
+    await loadHistoryFromDb();
+    setShowHistoryModal(true);
+  }
+
+
   async function optimizeExistingDatabase() {
     if (!isAdmin) return alert(T.noPermission);
     if (!supabase) return alert("Brak połączenia z Supabase.");
@@ -1793,7 +1837,7 @@ export default function App() {
   <div class="label">
     <div class="left">
       <div class="qrBox">
-        <img loading="lazy" decoding="async" src="${qrUrl(url)}" />
+        <img loading="eager" decoding="sync" crossorigin="anonymous" src="${qrUrl(url)}" />
       </div>
       <div class="scan">SCAN FOR STATUS</div>
     </div>
@@ -1808,7 +1852,16 @@ export default function App() {
   </div>
   <script>
     window.onload = function () {
-      window.print();
+      const imgs = Array.from(document.images || []);
+      Promise.all(imgs.map(function (img) {
+        if (img.complete) return Promise.resolve();
+        return new Promise(function (resolve) {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      })).then(function () {
+        setTimeout(function () { window.print(); }, 700);
+      });
     };
   </script>
 </body>
@@ -1832,7 +1885,7 @@ export default function App() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.18),transparent_34%),linear-gradient(135deg,#2f302d_0%,#474944_42%,#d7d2c8_100%)] text-zinc-950">
       {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">{T.loadingDb}</div></div></div>}
       {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">{T.supabaseOffline}</div></div>}
-      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
+      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={openHistoryModal} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1901,6 +1954,7 @@ export default function App() {
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} onOptimizeDatabase={optimizeExistingDatabase} />}
       {showTransfer && selected && <TransferModal T={T} code={transferCode} tool={selected} onClose={() => setShowTransfer(false)} />}
       {showClaim && <ClaimModal T={T} initialCode={transferCode} onClose={() => setShowClaim(false)} onClaim={claimTransfer} />}
+      {historyLoading && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 text-white"><div className="rounded-3xl bg-zinc-950 p-6 font-black shadow-2xl">Ładowanie historii...</div></div>}
       {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} onOpen={(item) => setSelectedHistory(item)} />}
       {selectedHistory && <HistoryDetailModal T={T} item={selectedHistory} tool={tools.find((t) => t.id === selectedHistory.toolId)} onClose={() => setSelectedHistory(null)} />}
       {showPhotoModal && photoContext && <HandoverPhotoModal T={T} context={photoContext} history={history} setHistory={setHistory} onClose={() => { setShowPhotoModal(false); setPhotoContext(null); }} />}
