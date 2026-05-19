@@ -1009,6 +1009,7 @@ export default function App() {
   const [publicToolId, setPublicToolId] = useState("");
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbStatus, setDbStatus] = useState("local");
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const T = I18N[lang] || I18N.pl;
 
@@ -1047,10 +1048,9 @@ export default function App() {
 
     try {
       setDbStatus("loading");
-      const [toolsRes, settingsRes, historyRes] = await Promise.all([
+      const [toolsRes, settingsRes] = await Promise.all([
         supabase.from("tools").select("id,data").order("id"),
         supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
-        supabase.from("history").select("id,data").limit(250),
       ]);
 
       let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
@@ -1058,9 +1058,7 @@ export default function App() {
         inspections: normalizeInspectionsList(tool.inspections),
       }));
       let serverSettings = settingsRes.data?.data || null;
-      let loadedHistory = (historyRes.data || [])
-        .map((row) => ({ id: row.id, ...(row.data || {}) }))
-        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+      let loadedHistory = [];
 
       const pickedSettings = pickBestSettings(localSettings, serverSettings);
       let loadedSettings = pickedSettings.settings;
@@ -1096,13 +1094,61 @@ export default function App() {
     }
   }
 
+  async function loadHistory({ toolId = "", limit = 120, replace = true } = {}) {
+    if (!dbLoaded) return [];
+
+    if (!supabase) {
+      const local = load(HISTORY_KEY, []);
+      const filteredLocal = toolId ? local.filter((h) => h.toolId === toolId) : local;
+      const sortedLocal = filteredLocal
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+        .slice(0, limit);
+      if (replace) {
+        if (toolId) setHistory((prev) => [...sortedLocal, ...prev.filter((h) => h.toolId !== toolId)]);
+        else setHistory(sortedLocal);
+      }
+      return sortedLocal;
+    }
+
+    try {
+      setHistoryLoading(true);
+      let query = supabase.from("history").select("id,data").limit(limit);
+      if (toolId) query = query.filter("data->>toolId", "eq", toolId);
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const loaded = (data || [])
+        .map((row) => ({ id: row.id, ...(row.data || {}) }))
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
+      if (replace) {
+        if (toolId) setHistory((prev) => [...loaded, ...prev.filter((h) => h.toolId !== toolId)]);
+        else setHistory(loaded);
+      }
+
+      return loaded;
+    } catch (e) {
+      console.error("history load error", e);
+      return [];
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!dbLoaded || !selected?.id) return;
+    loadHistory({ toolId: selected.id, limit: 60, replace: true });
+  }, [dbLoaded, selected?.id]);
+
   useEffect(() => {
     if (!dbLoaded) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
   }, [tools, dbLoaded]);
   useEffect(() => {
     if (!dbLoaded) return;
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    // Przy Supabase nie zapisujemy całej ciężkiej historii ze zdjęciami do localStorage.
+    // To mocno przyspiesza telefon i nie usuwa danych z bazy.
+    if (!supabase) localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history, dbLoaded]);
   useEffect(() => {
     if (!dbLoaded) return;
@@ -1510,30 +1556,11 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  async function printLabel(tool) {
+  function printLabel(tool) {
     const url = publicLink(tool.id);
     // Etykieta Zebra 76 x 51 mm.
-    // QR konwertujemy do data:image/png;base64 przed drukiem.
-    // Zebra czasem pokazuje zewnętrzny QR w podglądzie, ale nie drukuje go fizycznie.
-    // Dzięki dataURL QR jest osadzony w wydruku tak jak zwykłe zdjęcie.
-
-    async function imageUrlToDataUrl(src) {
-      try {
-        const response = await fetch(src, { cache: "no-store" });
-        const blob = await response.blob();
-        return await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || src));
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch (e) {
-        console.warn("QR dataURL fallback", e);
-        return src;
-      }
-    }
-
-    const qrImageSrc = await imageUrlToDataUrl(qrUrl(url));
+    // Na naklejce nie drukujemy statusu ani przeglądów, bo aktualny stan jest po zeskanowaniu QR.
+    // Nie drukujemy też długiego URL, żeby nie zaśmiecać etykiety.
 
     const html = `<!doctype html>
 <html>
@@ -1679,7 +1706,7 @@ export default function App() {
   <div class="label">
     <div class="left">
       <div class="qrBox">
-        <img crossorigin="anonymous" loading="eager" decoding="sync" src="${qrImageSrc}" />
+        <img loading="lazy" decoding="async" src="${qrUrl(url)}" />
       </div>
       <div class="scan">SCAN FOR STATUS</div>
     </div>
@@ -1693,25 +1720,9 @@ export default function App() {
     </div>
   </div>
   <script>
-    function waitForImagesThenPrint() {
-      const imgs = Array.from(document.images || []);
-      Promise.all(imgs.map((img) => {
-        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          setTimeout(resolve, 1500);
-        });
-      })).then(() => {
-        setTimeout(() => window.print(), 700);
-      });
-    }
-
-    if (document.readyState === "complete") {
-      waitForImagesThenPrint();
-    } else {
-      window.onload = waitForImagesThenPrint;
-    }
+    window.onload = function () {
+      window.print();
+    };
   </script>
 </body>
 </html>`;
@@ -1734,7 +1745,7 @@ export default function App() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.18),transparent_34%),linear-gradient(135deg,#2f302d_0%,#474944_42%,#d7d2c8_100%)] text-zinc-950">
       {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">{T.loadingDb}</div></div></div>}
       {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">{T.supabaseOffline}</div></div>}
-      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => setShowHistoryModal(true)} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
+      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={() => { setShowHistoryModal(true); loadHistory({ limit: 250, replace: true }); }} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1803,7 +1814,7 @@ export default function App() {
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} />}
       {showTransfer && selected && <TransferModal T={T} code={transferCode} tool={selected} onClose={() => setShowTransfer(false)} />}
       {showClaim && <ClaimModal T={T} initialCode={transferCode} onClose={() => setShowClaim(false)} onClaim={claimTransfer} />}
-      {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} onOpen={(item) => setSelectedHistory(item)} />}
+      {showHistoryModal && <HistoryModal T={T} history={history} tools={tools} loading={historyLoading} onClose={() => setShowHistoryModal(false)} onPrint={() => printHistory(history)} onOpen={(item) => setSelectedHistory(item)} />}
       {selectedHistory && <HistoryDetailModal T={T} item={selectedHistory} tool={tools.find((t) => t.id === selectedHistory.toolId)} onClose={() => setSelectedHistory(null)} />}
       {showPhotoModal && photoContext && <HandoverPhotoModal T={T} context={photoContext} history={history} setHistory={setHistory} onClose={() => { setShowPhotoModal(false); setPhotoContext(null); }} />}
     </div>
@@ -2490,7 +2501,7 @@ function TransferModal({ T, code, tool, onClose }) {
   return <Modal><ModalHeader title={T.transferCode} subtitle={T.transferCodeSubtitle} onClose={onClose} /><div className="p-6 text-center"><p className="text-lg font-black">{tool.name}</p><p className="text-sm text-zinc-500">{tool.id}</p><img loading="lazy" decoding="async" src={qrUrl(url)} alt="QR" className="mx-auto mt-5 h-64 w-64 rounded-3xl border bg-white p-3 shadow-xl" /><textarea value={code} readOnly className="mt-4 h-24 w-full rounded-xl border p-3 text-xs" /></div></Modal>;
 }
 
-function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
+function HistoryModal({ T, history, tools, loading = false, onClose, onPrint, onOpen }) {
   return <Modal wide><ModalHeader title={T.historyTitle} subtitle={T.historySubtitle} onClose={onClose} /><div className="p-4 sm:p-6"><div className="mb-4 flex justify-end"><Button onClick={onPrint} className="rounded-2xl bg-zinc-950 hover:bg-zinc-800"><Printer className="mr-2 h-4 w-4" /> {T.printAllHistory}</Button></div><div className="max-h-[65vh] overflow-auto rounded-2xl border"><table className="w-full min-w-[920px] text-left text-xs"><thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">{T.date}</th><th className="p-3">{T.equipment}</th><th className="p-3">ID / Serial</th><th className="p-3">{T.action}</th><th className="p-3">{T.from}</th><th className="p-3">{T.to}</th><th className="p-3">{T.details}</th><th className="p-3">{T.photos}</th></tr></thead><tbody>{history.map((h) => { const tool = tools.find((t) => t.id === h.toolId); const photoCount = historyPhotoCount(h); return <tr key={h.id} onClick={() => onOpen(h)} className="cursor-pointer border-t odd:bg-zinc-50 hover:bg-orange-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{h.toolId}<br />SN: {h.serial || tool?.serial || "—"}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3 font-bold">{h.from || "—"}</td><td className="p-3 font-bold">{h.to || "—"}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3 font-bold">{photoCountText(photoCount, T)}</td></tr>; })}</tbody></table>{!history.length && <div className="p-6 text-sm text-zinc-500">{T.noHistory}</div>}</div><p className="mt-3 text-xs text-zinc-500">{T.historyClickHint}</p></div></Modal>;
 }
 
