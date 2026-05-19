@@ -1073,6 +1073,8 @@ export default function App() {
   const [editing, setEditing] = useState(false);
   const [showInspection, setShowInspection] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDayReport, setShowDayReport] = useState(false);
+  const [showFailureModal, setShowFailureModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -1226,6 +1228,15 @@ export default function App() {
     danger: tools.filter((t) => inspectionStatus(t, T).danger).length,
   };
 
+  const alarmStats = useMemo(() => {
+    const failures = tools.filter((t) => t.status === "Awaria" || t.status === "Uszkodzone");
+    const qrIssues = tools.filter((t) => !!t.qrIssue);
+    const inspectionWarnings = tools.filter((t) => inspectionStatus(t, T).danger);
+    const unassigned = tools.filter((t) => !t.assignedTo);
+    const noLocation = tools.filter((t) => !t.location);
+    return { failures, qrIssues, inspectionWarnings, unassigned, noLocation };
+  }, [tools, T]);
+
   async function log(tool, action, details, extra = {}) {
     const item = {
       id: crypto.randomUUID?.() || String(Date.now()),
@@ -1352,6 +1363,7 @@ export default function App() {
       result: noRequired ? "OK" : (isServiceRecord(inspection) ? (inspection.result || T.done) : inspection.result),
       doneDate: noRequired ? "" : inspection.doneDate,
       nextDate: (noRequired || isServiceRecord(inspection)) ? "" : inspection.nextDate,
+      cost: inspection.cost || "",
       attachments: Array.isArray(inspection.attachments)
         ? inspection.attachments.map((a, i) => normalizeAttachment(a, i)).filter(Boolean)
         : [],
@@ -1492,6 +1504,10 @@ export default function App() {
       const updated = {
         ...currentTool,
         status: restoredStatus,
+        failurePriority: "",
+        failureNote: "",
+        failureAt: "",
+        failureBy: "",
         notes: currentTool.notes || "",
       };
 
@@ -1503,18 +1519,34 @@ export default function App() {
       return;
     }
 
+    setShowFailureModal(true);
+  }
+
+  function submitFailureReport(report) {
+    if (!selected) return;
+    const currentTool = tools.find((t) => t.id === selected.id) || selected;
+    const priority = report?.priority || "średni";
+    const note = report?.note || "";
+    const attachments = Array.isArray(report?.attachments) ? report.attachments : [];
     const updated = {
       ...currentTool,
       status: "Awaria",
+      failurePriority: priority,
+      failureNote: note,
+      failureAt: new Date().toLocaleString("pl-PL"),
+      failureBy: user || "",
       notes: currentTool.notes || "",
     };
 
     updateTool(
       updated,
       T.failureReported || "Zgłoszono awarię",
-      `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}`
+      `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}${priority ? ` • Priorytet: ${priority}` : ""}${note ? ` • ${note}` : ""}`,
+      { historyExtra: { attachments, priority, failureNote: note } }
     );
+    setShowFailureModal(false);
   }
+
 
   function toggleQrIssue() {
     if (!selected) return;
@@ -1572,6 +1604,11 @@ export default function App() {
   async function openHistoryModal() {
     await loadHistoryFromDb();
     setShowHistoryModal(true);
+  }
+
+  async function openDayReport() {
+    await loadHistoryFromDb();
+    setShowDayReport(true);
   }
 
 
@@ -1685,6 +1722,20 @@ export default function App() {
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function printToolCard(tool) {
+    if (!tool) return;
+    const toolHistory = history.filter((h) => h.toolId === tool.id).slice(0, 80);
+    const insp = inspections(tool);
+    const totalCost = insp.reduce((sum, i) => sum + (parseFloat(String(i.cost || "0").replace(",", ".")) || 0), 0);
+    const rows = toolHistory.map((h) => `<tr><td>${h.date || ""}</td><td>${historyActionText(h.action, T)}</td><td>${historyDetailsText(h.details, T)}</td><td>${h.from || "—"}</td><td>${h.to || "—"}</td></tr>`).join("");
+    const inspRows = insp.map((i) => `<tr><td>${i.type || ""}</td><td>${i.doneDate || "—"}</td><td>${i.nextDate || (isNoInspectionRequired(i) ? (T.inspectionsOkPermanent || "OK bezterminowo") : "—")}</td><td>${i.result || "—"}</td><td>${i.cost || "—"}</td><td>${i.notes || ""}</td></tr>`).join("");
+    const html = `<html><head><meta charset="UTF-8"><title>Karta urządzenia ${tool.id}</title><style>body{font-family:Arial;margin:24px;color:#111}h1{margin:0 0 6px}h2{margin-top:22px;border-bottom:2px solid #111;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px}td,th{border:1px solid #ccc;padding:7px;text-align:left;vertical-align:top}th{background:#111;color:#fff}.box{border:2px solid #111;border-radius:14px;padding:14px;margin:14px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.muted{color:#666}.badge{display:inline-block;border:1px solid #111;border-radius:999px;padding:4px 10px;font-weight:bold}</style></head><body><h1>ACC BAU • Karta urządzenia</h1><div class="muted">Wygenerowano: ${new Date().toLocaleString("pl-PL")}</div><div class="box"><div class="grid"><div><b>Nazwa:</b> ${tool.name || "—"}<br/><b>ID:</b> ${tool.id || "—"}<br/><b>SN:</b> ${tool.serial || "—"}<br/><b>Marka/model:</b> ${tool.brand || ""} ${tool.model || ""}</div><div><b>Status:</b> <span class="badge">${tool.status || "—"}</span><br/><b>Projekt:</b> ${tool.project || "—"}<br/><b>Lokalizacja:</b> ${tool.location || "—"}<br/><b>Posiadacz:</b> ${tool.assignedTo || T.warehouse}</div></div><p><b>Uwagi:</b> ${tool.notes || "—"}</p></div><h2>Przeglądy / serwis / naprawy</h2><div class="muted">Suma kosztów wpisów: <b>${totalCost ? totalCost.toFixed(2) : "0.00"}</b></div><table><thead><tr><th>Typ</th><th>Data</th><th>Następny</th><th>Wynik</th><th>Koszt</th><th>Opis</th></tr></thead><tbody>${inspRows || "<tr><td colspan='6'>Brak wpisów</td></tr>"}</tbody></table><h2>Historia</h2><table><thead><tr><th>Data</th><th>Akcja</th><th>Szczegóły</th><th>Od</th><th>Do</th></tr></thead><tbody>${rows || "<tr><td colspan='5'>Brak historii</td></tr>"}</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) return alert("Nie udało się otworzyć okna wydruku.");
+    w.document.write(html);
+    w.document.close();
   }
 
   function printLabel(tool) {
@@ -1895,6 +1946,14 @@ export default function App() {
           <StatCard icon={<AlertTriangle />} label={T.inspectionsWarning} value={stats.danger} danger />
         </section>
 
+        <AlertsDashboard
+          T={T}
+          alarmStats={alarmStats}
+          onFilterStatus={setStatus}
+          onFilterPerson={setPerson}
+          onDayReport={openDayReport}
+        />
+
         <section className="mt-6 grid gap-5 lg:grid-cols-[1.12fr_0.88fr]">
           <Card className="overflow-hidden rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)] backdrop-blur">
             <CardContent className="p-4 sm:p-6">
@@ -1943,7 +2002,7 @@ export default function App() {
                     return;
                   }
                 }
-              }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onQrIssue={toggleQrIssue} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
+              }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onQrIssue={toggleQrIssue} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintCard={() => printToolCard(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
         </section>
@@ -1952,6 +2011,8 @@ export default function App() {
       {showToolForm && <ToolForm T={T} form={toolForm} setForm={setToolForm} settings={settings} onClose={() => setShowToolForm(false)} onSave={saveTool} editing={editing} />}
       {showInspection && selected && <InspectionModal T={T} onClose={() => setShowInspection(false)} onSave={addInspection} />}
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} onOptimizeDatabase={optimizeExistingDatabase} />}
+      {showDayReport && <DayReportModal T={T} history={history} tools={tools} onClose={() => setShowDayReport(false)} />}
+      {showFailureModal && selected && <FailureReportModal T={T} tool={selected} onClose={() => setShowFailureModal(false)} onSave={submitFailureReport} />}
       {showTransfer && selected && <TransferModal T={T} code={transferCode} tool={selected} onClose={() => setShowTransfer(false)} />}
       {showClaim && <ClaimModal T={T} initialCode={transferCode} onClose={() => setShowClaim(false)} onClaim={claimTransfer} />}
       {historyLoading && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 text-white"><div className="rounded-3xl bg-zinc-950 p-6 font-black shadow-2xl">Ładowanie historii...</div></div>}
@@ -2185,8 +2246,10 @@ function ToolRow({ tool, active, onClick, T }) {
   );
 }
 
-function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onReportFailure, onQrIssue, onInspection, onDeleteInspection, onPrint, onPrintHistory, onOpenHistory }) {
+function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, onReturn, onReportFailure, onQrIssue, onInspection, onDeleteInspection, onPrint, onPrintCard, onPrintHistory, onOpenHistory }) {
   const state = inspectionStatus(tool, T);
+  const lastActivity = history?.[0];
+  const totalCost = inspections(tool).reduce((sum, i) => sum + (parseFloat(String(i.cost || "0").replace(",", ".")) || 0), 0);
 
   return (
     <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
@@ -2204,6 +2267,8 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         {(tool.status === "Awaria" || tool.status === "Uszkodzone") && <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700"><AlertTriangle className="mr-2 inline h-4 w-4" /> {T.failureStatus || "Awaria"}</div>}
         {tool.qrIssue && <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800"><ScanLine className="mr-2 inline h-4 w-4" /> {T.qrAlarmStatus || "QR nieczytelne — potrzebna nowa naklejka"}</div>}
+        {lastActivity && <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700"><b>Ostatnia aktywność:</b> {historyActionText(lastActivity.action, T)} • {historyDetailsText(lastActivity.details, T)} • {lastActivity.date}</div>}
+        {totalCost > 0 && <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-black text-orange-800">Koszty serwisu/napraw: {totalCost.toFixed(2)}</div>}
 
         <div className="mt-5 grid gap-3 text-sm">
           <Info label={T.status} value={tool.status || "—"} />
@@ -2233,6 +2298,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
           </Button>
           {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
+          <Button onClick={onPrintCard} variant="outline" className="rounded-2xl"><ClipboardList className="mr-2 h-4 w-4" /> Karta PDF</Button>
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
           {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
           {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
@@ -2393,11 +2459,12 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
         {noRequired ? (
           <>{T.noInspectionRequired || "Nie wymaga przeglądu"}</>
         ) : service ? (
-          <>{T.workDone}: {inspection.notes || "—"}</>
+          <>{T.workDone}: {inspection.notes || "—"}{inspection.cost ? <> • Koszt: {inspection.cost}</> : null}</>
         ) : (
           <>
             {T.result}: {inspection.result || "—"}
             {inspection.notes ? <> • {inspection.notes}</> : null}
+            {inspection.cost ? <> • Koszt: {inspection.cost}</> : null}
           </>
         )}
       </div>
@@ -2443,6 +2510,7 @@ function InspectionModal({ T, onClose, onSave }) {
     nextDate: addMonths(today(), 6),
     result: "OK",
     notes: "",
+    cost: "",
     noInspectionRequired: false,
     attachments: [],
   });
@@ -2526,6 +2594,7 @@ function InspectionModal({ T, onClose, onSave }) {
         {!service && !noRequired && <Field type="date" label={T.nextInspection} value={i.nextDate} onChange={(v) => setI({ ...i, nextDate: v })} />}
         {noRequired && <div className="rounded-2xl border border-green-200 bg-green-50 p-3 text-sm font-bold text-green-800">{T.inspectionsOkPermanent || "Przeglądy OK — bezterminowo"}</div>}
         {service && <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">{T.noNextDateRequired}</div>}
+        {!noRequired && <Field label="Koszt naprawy / serwisu" value={i.cost} onChange={(v) => setI({ ...i, cost: v })} />}
         {!noRequired && (
           <label className="block md:col-span-2">
             <span className="mb-1 block text-xs font-bold text-zinc-500">{service ? T.workDone : T.notes}</span>
@@ -2576,6 +2645,128 @@ function InspectionModal({ T, onClose, onSave }) {
         </div>
       </div>
       <ModalFooter T={T} onClose={onClose} onSave={() => onSave(i)} />
+    </Modal>
+  );
+}
+
+
+function AlertsDashboard({ T, alarmStats, onFilterStatus, onFilterPerson, onDayReport }) {
+  const items = [
+    { label: "Awarie", value: alarmStats.failures.length, cls: "bg-red-50 border-red-200 text-red-700", action: () => onFilterStatus("Awaria") },
+    { label: "QR do wymiany", value: alarmStats.qrIssues.length, cls: "bg-amber-50 border-amber-200 text-amber-800", action: () => {} },
+    { label: "Przeglądy / braki", value: alarmStats.inspectionWarnings.length, cls: "bg-orange-50 border-orange-200 text-orange-800", action: () => onFilterStatus("Wszystkie") },
+    { label: "Bez osoby", value: alarmStats.unassigned.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", action: () => onFilterPerson("Nieprzypisane") },
+    { label: "Bez lokalizacji", value: alarmStats.noLocation.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", action: () => {} },
+  ];
+
+  return (
+    <Card className="mt-6 rounded-[32px] border border-white/30 bg-white/95 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+      <CardContent className="p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-black">Dashboard alarmów</h2>
+            <p className="text-sm text-zinc-500">Szybki podgląd tego, co wymaga reakcji.</p>
+          </div>
+          <Button onClick={onDayReport} className="rounded-2xl bg-zinc-950 text-white hover:bg-zinc-800">
+            <ClipboardList className="mr-2 h-4 w-4" /> Raport dnia
+          </Button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {items.map((item) => (
+            <button key={item.label} type="button" onClick={item.action} className={`rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${item.cls}`}>
+              <div className="text-2xl font-black">{item.value}</div>
+              <div className="text-xs font-black uppercase tracking-wide">{item.label}</div>
+            </button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DayReportModal({ T, history, tools, onClose }) {
+  const todayDate = new Date().toLocaleDateString("pl-PL");
+  const rows = (history || []).filter((h) => String(h.date || "").includes(todayDate)).slice(0, 200);
+  const failures = rows.filter((h) => String(h.action || "").includes("awari"));
+  const transfers = rows.filter((h) => String(h.action || "").includes("Przekaz") || String(h.action || "").includes("Przeję"));
+  const services = rows.filter((h) => String(h.action || "").includes("Serwis") || String(h.action || "").includes("Przegl"));
+
+  function print() {
+    const html = `<html><head><meta charset="UTF-8"><title>Raport dnia</title><style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ccc;padding:7px}th{background:#111;color:#fff}</style></head><body><h1>ACC BAU • Raport dnia</h1><p>${new Date().toLocaleString("pl-PL")}</p><p>Awarie: <b>${failures.length}</b> • Przekazania: <b>${transfers.length}</b> • Serwis/przeglądy: <b>${services.length}</b></p><table><thead><tr><th>Data</th><th>Sprzęt</th><th>Akcja</th><th>Szczegóły</th><th>Od</th><th>Do</th></tr></thead><tbody>${rows.map((h)=>`<tr><td>${h.date||""}</td><td>${h.toolName||h.toolId||""}</td><td>${historyActionText(h.action,T)}</td><td>${historyDetailsText(h.details,T)}</td><td>${h.from||"—"}</td><td>${h.to||"—"}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  }
+
+  return (
+    <Modal wide>
+      <ModalHeader title="Raport dnia" subtitle="Dzisiejsze przekazania, awarie i serwisy" onClose={onClose} />
+      <div className="p-5">
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <StatMini label="Awarie" value={failures.length} />
+          <StatMini label="Przekazania" value={transfers.length} />
+          <StatMini label="Serwis/przeglądy" value={services.length} />
+        </div>
+        <div className="mb-4 flex justify-end"><Button onClick={print} className="rounded-2xl bg-zinc-950 text-white"><Printer className="mr-2 h-4 w-4" /> Drukuj raport</Button></div>
+        <div className="max-h-[60vh] overflow-auto rounded-2xl border">
+          <table className="w-full min-w-[760px] text-left text-xs">
+            <thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Sprzęt</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły</th><th className="p-3">Od</th><th className="p-3">Do</th></tr></thead>
+            <tbody>{rows.map((h) => { const tool = tools.find((t) => t.id === h.toolId); return <tr key={h.id} className="border-t odd:bg-zinc-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3">{h.from || "—"}</td><td className="p-3">{h.to || "—"}</td></tr>; })}</tbody>
+          </table>
+          {!rows.length && <div className="p-6 text-sm text-zinc-500">Brak wpisów z dzisiaj.</div>}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function StatMini({ label, value }) {
+  return <div className="rounded-2xl border bg-zinc-50 p-4"><div className="text-2xl font-black">{value}</div><div className="text-xs font-bold uppercase text-zinc-500">{label}</div></div>;
+}
+
+function FailureReportModal({ T, tool, onClose, onSave }) {
+  const [note, setNote] = useState("");
+  const [priority, setPriority] = useState("średni");
+  const [attachments, setAttachments] = useState([]);
+  const [preparing, setPreparing] = useState(false);
+  const cameraRef = useRef(null);
+  const uploadRef = useRef(null);
+
+  async function addFiles(files) {
+    const selectedFiles = Array.from(files || []).slice(0, 4);
+    if (!selectedFiles.length) return;
+    setPreparing(true);
+    const prepared = [];
+    for (const file of selectedFiles) {
+      try {
+        const attachment = await prepareAttachmentFile(file);
+        if (attachment) prepared.push(attachment);
+      } catch (e) {
+        alert(T.attachmentPrepareError || T.preparePhotoError);
+      }
+    }
+    setAttachments((prev) => [...prev, ...prepared]);
+    if (cameraRef.current) cameraRef.current.value = "";
+    if (uploadRef.current) uploadRef.current.value = "";
+    setPreparing(false);
+  }
+
+  return (
+    <Modal>
+      <ModalHeader title="Zgłoś awarię" subtitle={`${tool.name} • ${tool.id}`} onClose={onClose} />
+      <div className="grid gap-4 p-6">
+        <FormSelect label="Priorytet" value={priority} options={["niski", "średni", "pilny"]} onChange={setPriority} />
+        <label className="block"><span className="mb-1 block text-xs font-bold text-zinc-500">Co się stało?</span><textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-28 w-full rounded-xl border px-3 py-2" placeholder="Np. uszkodzony kabel, nie działa, wyciek, pęknięcie..." /></label>
+        <div className="rounded-2xl border bg-zinc-50 p-4">
+          <div className="mb-3 text-sm font-black">Zdjęcia awarii / uszkodzeń</div>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple onChange={(e) => addFiles(e.target.files)} className="hidden" />
+          <input ref={uploadRef} type="file" accept="image/*,application/pdf" multiple onChange={(e) => addFiles(e.target.files)} className="hidden" />
+          <div className="grid gap-3 sm:grid-cols-2"><Button type="button" onClick={() => cameraRef.current?.click()} className="rounded-2xl bg-emerald-600 py-5 font-black">Zrób zdjęcie</Button><Button type="button" variant="outline" onClick={() => uploadRef.current?.click()} className="rounded-2xl py-5 font-black">Wgraj plik</Button></div>
+          {preparing && <div className="mt-3 text-sm font-bold">{T.saving}</div>}
+          <AttachmentGallery attachments={attachments} T={T} compact />
+        </div>
+      </div>
+      <ModalFooter T={T} onClose={onClose} onSave={() => onSave({ note, priority, attachments })} />
     </Modal>
   );
 }
