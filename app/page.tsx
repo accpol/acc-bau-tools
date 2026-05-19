@@ -1510,11 +1510,30 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function printLabel(tool) {
+  async function printLabel(tool) {
     const url = publicLink(tool.id);
     // Etykieta Zebra 76 x 51 mm.
-    // Na naklejce nie drukujemy statusu ani przeglądów, bo aktualny stan jest po zeskanowaniu QR.
-    // Nie drukujemy też długiego URL, żeby nie zaśmiecać etykiety.
+    // QR konwertujemy do data:image/png;base64 przed drukiem.
+    // Zebra czasem pokazuje zewnętrzny QR w podglądzie, ale nie drukuje go fizycznie.
+    // Dzięki dataURL QR jest osadzony w wydruku tak jak zwykłe zdjęcie.
+
+    async function imageUrlToDataUrl(src) {
+      try {
+        const response = await fetch(src, { cache: "no-store" });
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || src));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        console.warn("QR dataURL fallback", e);
+        return src;
+      }
+    }
+
+    const qrImageSrc = await imageUrlToDataUrl(qrUrl(url));
 
     const html = `<!doctype html>
 <html>
@@ -1660,7 +1679,7 @@ export default function App() {
   <div class="label">
     <div class="left">
       <div class="qrBox">
-        <img loading="lazy" decoding="async" src="${qrUrl(url)}" />
+        <img crossorigin="anonymous" loading="eager" decoding="sync" src="${qrImageSrc}" />
       </div>
       <div class="scan">SCAN FOR STATUS</div>
     </div>
@@ -1674,9 +1693,25 @@ export default function App() {
     </div>
   </div>
   <script>
-    window.onload = function () {
-      window.print();
-    };
+    function waitForImagesThenPrint() {
+      const imgs = Array.from(document.images || []);
+      Promise.all(imgs.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          setTimeout(resolve, 1500);
+        });
+      })).then(() => {
+        setTimeout(() => window.print(), 700);
+      });
+    }
+
+    if (document.readyState === "complete") {
+      waitForImagesThenPrint();
+    } else {
+      window.onload = waitForImagesThenPrint;
+    }
   </script>
 </body>
 </html>`;
