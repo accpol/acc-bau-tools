@@ -1068,6 +1068,7 @@ export default function App() {
   const [status, setStatus] = useState("Wszystkie");
   const [project, setProject] = useState("Wszystkie");
   const [person, setPerson] = useState("Wszystkie");
+  const [dashboardFilter, setDashboardFilter] = useState("");
   const [showToolForm, setShowToolForm] = useState(false);
   const [toolForm, setToolForm] = useState(emptyTool);
   const [editing, setEditing] = useState(false);
@@ -1213,13 +1214,28 @@ export default function App() {
   const filtered = useMemo(() => {
     return tools.filter((t) => {
       const text = `${t.id} ${t.name} ${t.brand} ${t.model} ${t.serial} ${t.assignedTo} ${t.project}`.toLowerCase();
-      return text.includes(query.toLowerCase()) &&
+      const dashboardMatch =
+        !dashboardFilter ||
+        (dashboardFilter === "failures" && (t.status === "Awaria" || t.status === "Uszkodzone")) ||
+        (dashboardFilter === "qrIssues" && !!t.qrIssue) ||
+        (dashboardFilter === "inspectionWarnings" && inspectionStatus(t, T).danger) ||
+        (dashboardFilter === "unassigned" && !t.assignedTo) ||
+        (dashboardFilter === "noLocation" && !t.location);
+
+      return dashboardMatch &&
+        text.includes(query.toLowerCase()) &&
         (category === "Wszystkie" || t.category === category) &&
         (status === "Wszystkie" || t.status === status) &&
         (project === "Wszystkie" || t.project === project) &&
         (person === "Wszystkie" || (person === "Nieprzypisane" ? !t.assignedTo : t.assignedTo === person));
     });
-  }, [tools, query, category, status, project, person]);
+  }, [tools, query, category, status, project, person, dashboardFilter, T]);
+
+  function toggleDashboardFilter(filterKey) {
+    setDashboardFilter((current) => current === filterKey ? "" : filterKey);
+    setStatus("Wszystkie");
+    setPerson("Wszystkie");
+  }
 
   const stats = {
     all: tools.length,
@@ -1949,8 +1965,8 @@ export default function App() {
         <AlertsDashboard
           T={T}
           alarmStats={alarmStats}
-          onFilterStatus={setStatus}
-          onFilterPerson={setPerson}
+          activeFilter={dashboardFilter}
+          onToggleFilter={toggleDashboardFilter}
           onDayReport={openDayReport}
         />
 
@@ -2650,13 +2666,13 @@ function InspectionModal({ T, onClose, onSave }) {
 }
 
 
-function AlertsDashboard({ T, alarmStats, onFilterStatus, onFilterPerson, onDayReport }) {
+function AlertsDashboard({ T, alarmStats, activeFilter, onToggleFilter, onDayReport }) {
   const items = [
-    { label: "Awarie", value: alarmStats.failures.length, cls: "bg-red-50 border-red-200 text-red-700", action: () => onFilterStatus("Awaria") },
-    { label: "QR do wymiany", value: alarmStats.qrIssues.length, cls: "bg-amber-50 border-amber-200 text-amber-800", action: () => {} },
-    { label: "Przeglądy / braki", value: alarmStats.inspectionWarnings.length, cls: "bg-orange-50 border-orange-200 text-orange-800", action: () => onFilterStatus("Wszystkie") },
-    { label: "Bez osoby", value: alarmStats.unassigned.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", action: () => onFilterPerson("Nieprzypisane") },
-    { label: "Bez lokalizacji", value: alarmStats.noLocation.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", action: () => {} },
+    { key: "failures", label: "Awarie", value: alarmStats.failures.length, cls: "bg-red-50 border-red-200 text-red-700", activeCls: "ring-red-500 bg-red-100 border-red-400" },
+    { key: "qrIssues", label: "QR do wymiany", value: alarmStats.qrIssues.length, cls: "bg-amber-50 border-amber-200 text-amber-800", activeCls: "ring-amber-500 bg-amber-100 border-amber-400" },
+    { key: "inspectionWarnings", label: "Przeglądy / braki", value: alarmStats.inspectionWarnings.length, cls: "bg-orange-50 border-orange-200 text-orange-800", activeCls: "ring-orange-500 bg-orange-100 border-orange-400" },
+    { key: "unassigned", label: "Bez osoby", value: alarmStats.unassigned.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
+    { key: "noLocation", label: "Bez lokalizacji", value: alarmStats.noLocation.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
   ];
 
   return (
@@ -2665,19 +2681,32 @@ function AlertsDashboard({ T, alarmStats, onFilterStatus, onFilterPerson, onDayR
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-black">Dashboard alarmów</h2>
-            <p className="text-sm text-zinc-500">Szybki podgląd tego, co wymaga reakcji.</p>
+            <p className="text-sm text-zinc-500">Kliknij kafelek, żeby filtrować. Kliknij ponownie, żeby odznaczyć i wrócić do wszystkich.</p>
           </div>
           <Button onClick={onDayReport} className="rounded-2xl bg-zinc-950 text-white hover:bg-zinc-800">
             <ClipboardList className="mr-2 h-4 w-4" /> Raport dnia
           </Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {items.map((item) => (
-            <button key={item.label} type="button" onClick={item.action} className={`rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${item.cls}`}>
-              <div className="text-2xl font-black">{item.value}</div>
-              <div className="text-xs font-black uppercase tracking-wide">{item.label}</div>
-            </button>
-          ))}
+          {items.map((item) => {
+            const active = activeFilter === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onToggleFilter(item.key)}
+                className={`rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${item.cls} ${active ? `ring-2 ring-offset-2 ${item.activeCls}` : ""}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-2xl font-black">{item.value}</div>
+                    <div className="text-xs font-black uppercase tracking-wide">{item.label}</div>
+                  </div>
+                  {active && <div className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase">aktywny</div>}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
