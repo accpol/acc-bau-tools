@@ -760,7 +760,7 @@ function load(key, fallback) {
   }
 }
 
-async function compressImage(file, maxSize = 1200, quality = 0.7) {
+async function compressImage(file, maxSize = 700, quality = 0.45) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -811,7 +811,7 @@ function readFileAsDataUrl(file) {
 async function prepareAttachmentFile(file) {
   if (!file) return null;
   const isImage = file.type?.startsWith("image/");
-  const url = isImage ? await compressImage(file, 1200, 0.7) : await readFileAsDataUrl(file);
+  const url = isImage ? await compressImage(file, 700, 0.45) : await readFileAsDataUrl(file);
   return {
     id: crypto.randomUUID?.() || String(Date.now() + Math.random()),
     name: file.name || "attachment",
@@ -1050,7 +1050,7 @@ export default function App() {
       const [toolsRes, settingsRes, historyRes] = await Promise.all([
         supabase.from("tools").select("id,data").order("id"),
         supabase.from("settings").select("id,data").eq("id", "main").maybeSingle(),
-        supabase.from("history").select("id,data"),
+        supabase.from("history").select("id,data").limit(250),
       ]);
 
       let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
@@ -1660,7 +1660,7 @@ export default function App() {
   <div class="label">
     <div class="left">
       <div class="qrBox">
-        <img src="${qrUrl(url)}" />
+        <img loading="lazy" decoding="async" src="${qrUrl(url)}" />
       </div>
       <div class="scan">SCAN FOR STATUS</div>
     </div>
@@ -1931,12 +1931,12 @@ function PublicToolView({ tool, T, lang, setLang, onBack }) {
 
               <div className="flex flex-col items-center gap-4">
                 <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-xl">
-                  <img src={qrUrl(window.location.href)} alt="QR" className="h-[220px] w-[220px]" />
+                  <img loading="lazy" decoding="async" src={qrUrl(window.location.href)} alt="QR" className="h-[220px] w-[220px]" />
                 </div>
 
                 {tool.photo && (
                   <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white p-2 shadow-xl">
-                    <img src={tool.photo} alt={tool.name} className="h-[150px] w-[220px] rounded-2xl object-cover" />
+                    <img loading="lazy" decoding="async" src={tool.photo} alt={tool.name} className="h-[150px] w-[220px] rounded-2xl object-cover" />
                   </div>
                 )}
               </div>
@@ -1975,7 +1975,7 @@ function ToolRow({ tool, active, onClick, T }) {
               {tool.photo && (
                 <div className="pointer-events-none fixed left-[220px] top-[160px] z-[9999] hidden w-72 overflow-hidden rounded-3xl border-2 border-zinc-300 bg-white p-3 opacity-100 shadow-[0_30px_90px_rgba(0,0,0,0.55)] ring-4 ring-white group-hover:block">
                   <div className="absolute inset-0 -z-10 bg-white" />
-                  <img src={tool.photo} alt={tool.name} className="h-48 w-full rounded-2xl bg-white object-cover" />
+                  <img loading="lazy" decoding="async" src={tool.photo} alt={tool.name} className="h-48 w-full rounded-2xl bg-white object-cover" />
                   <div className="bg-white px-2 py-2 text-xs font-bold text-zinc-700">
                     {tool.name}<br />
                     <span className="font-normal text-zinc-500">SN: {tool.serial || "—"}</span>
@@ -1991,7 +1991,7 @@ function ToolRow({ tool, active, onClick, T }) {
           <div className="mt-2 text-xs text-zinc-600">{tool.project} • {tool.location} • {tool.assignedTo || T.unassigned} • {T.next}: {u?.nextDate || T.missing}</div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border bg-white p-1 shadow-sm" />
+          <img loading="lazy" decoding="async" src={qrUrl(publicLink(tool.id))} alt="QR" className="h-16 w-16 rounded-2xl border bg-white p-1 shadow-sm" />
         </div>
       </div>
     </motion.div>
@@ -2010,10 +2010,10 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
             <p className="text-sm text-zinc-500">{tool.id}</p>
             {state.danger && <div className="mt-2 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700"><AlertTriangle className="mr-1 inline h-4 w-4" /> {T.inspectionNeedsAction}</div>}
           </div>
-          <img src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" />
+          <img loading="lazy" decoding="async" src={qrUrl(publicLink(tool.id))} alt="QR" className="h-24 w-24 rounded-3xl border bg-white p-2 shadow-xl" />
         </div>
 
-        {tool.photo && <div className="mt-5 w-full max-w-[220px] overflow-hidden rounded-3xl border bg-zinc-50 p-2"><img src={tool.photo} alt={tool.name} className="h-36 w-full rounded-2xl object-cover" /></div>}
+        {tool.photo && <div className="mt-5 w-full max-w-[220px] overflow-hidden rounded-3xl border bg-zinc-50 p-2"><img loading="lazy" decoding="async" src={tool.photo} alt={tool.name} className="h-36 w-full rounded-2xl object-cover" /></div>}
 
         {(tool.status === "Awaria" || tool.status === "Uszkodzone") && <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700"><AlertTriangle className="mr-2 inline h-4 w-4" /> {T.failureStatus || "Awaria"}</div>}
         {tool.qrIssue && <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800"><ScanLine className="mr-2 inline h-4 w-4" /> {T.qrAlarmStatus || "QR nieczytelne — potrzebna nowa naklejka"}</div>}
@@ -2123,7 +2123,7 @@ function AttachmentGallery({ attachments = [], T, compact = false }) {
                 className="h-12 w-12 overflow-hidden rounded-xl border bg-white p-1 shadow-sm hover:ring-2 hover:ring-orange-400"
                 title={name}
               >
-                <img src={url} alt={name} className="h-full w-full rounded-lg object-cover" />
+                <img loading="lazy" decoding="async" src={url} alt={name} className="h-full w-full rounded-lg object-cover" />
               </button>
             ) : (
               <a
@@ -2146,7 +2146,7 @@ function AttachmentGallery({ attachments = [], T, compact = false }) {
               onClick={() => setPreview({ url, name })}
               className="block overflow-hidden rounded-2xl border bg-white p-2 text-left shadow-sm hover:shadow-md"
             >
-              <img src={url} alt={name} className="h-28 w-full rounded-xl object-cover" />
+              <img loading="lazy" decoding="async" src={url} alt={name} className="h-28 w-full rounded-xl object-cover" />
               <div className="mt-2 truncate text-[11px] font-bold text-zinc-600">{name}</div>
             </button>
           ) : (
@@ -2166,7 +2166,7 @@ function AttachmentGallery({ attachments = [], T, compact = false }) {
             <button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-sm font-black text-white">
               ×
             </button>
-            <img src={preview.url} alt={preview.name} className="max-h-[82vh] w-auto rounded-2xl object-contain" />
+            <img loading="lazy" decoding="async" src={preview.url} alt={preview.name} className="max-h-[82vh] w-auto rounded-2xl object-contain" />
             <div className="mt-2 px-2 text-sm font-bold text-zinc-700">{preview.name}</div>
           </div>
         </div>
@@ -2236,7 +2236,7 @@ function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
     if (!file) return;
 
     try {
-      const compressed = await compressImage(file, 1200, 0.7);
+      const compressed = await compressImage(file, 700, 0.45);
       setForm({ ...form, photo: compressed });
     } catch (e) {
       alert(T.preparePhotoError);
@@ -2244,7 +2244,7 @@ function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
     }
   }
 
-  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label={T.name} value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label={T.brand} value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label={T.model} value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.toolPhoto}</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img src={form.photo} alt={T.preview} className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>{T.removePhoto}</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
+  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label={T.name} value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label={T.brand} value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label={T.model} value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.toolPhoto}</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img loading="lazy" decoding="async" src={form.photo} alt={T.preview} className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>{T.removePhoto}</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
 }
 
 function InspectionModal({ T, onClose, onSave }) {
@@ -2371,7 +2371,7 @@ function InspectionModal({ T, onClose, onSave }) {
                 return (
                   <div key={a.id || idx} className="relative overflow-hidden rounded-2xl border bg-white p-2 shadow-sm">
                     {isImage ? (
-                      <img src={a.url} alt={a.name} className="h-32 w-full rounded-xl object-cover" />
+                      <img loading="lazy" decoding="async" src={a.url} alt={a.name} className="h-32 w-full rounded-xl object-cover" />
                     ) : (
                       <div className="flex h-32 items-center justify-center rounded-xl bg-zinc-100 p-3 text-center text-xs font-bold text-zinc-600">PDF / FILE<br />{a.name}</div>
                     )}
@@ -2452,7 +2452,7 @@ function SettingsModal({ T, settings, setSettings, onClose }) {
 
 function TransferModal({ T, code, tool, onClose }) {
   const url = transferLink(code);
-  return <Modal><ModalHeader title={T.transferCode} subtitle={T.transferCodeSubtitle} onClose={onClose} /><div className="p-6 text-center"><p className="text-lg font-black">{tool.name}</p><p className="text-sm text-zinc-500">{tool.id}</p><img src={qrUrl(url)} alt="QR" className="mx-auto mt-5 h-64 w-64 rounded-3xl border bg-white p-3 shadow-xl" /><textarea value={code} readOnly className="mt-4 h-24 w-full rounded-xl border p-3 text-xs" /></div></Modal>;
+  return <Modal><ModalHeader title={T.transferCode} subtitle={T.transferCodeSubtitle} onClose={onClose} /><div className="p-6 text-center"><p className="text-lg font-black">{tool.name}</p><p className="text-sm text-zinc-500">{tool.id}</p><img loading="lazy" decoding="async" src={qrUrl(url)} alt="QR" className="mx-auto mt-5 h-64 w-64 rounded-3xl border bg-white p-3 shadow-xl" /><textarea value={code} readOnly className="mt-4 h-24 w-full rounded-xl border p-3 text-xs" /></div></Modal>;
 }
 
 function HistoryModal({ T, history, tools, onClose, onPrint, onOpen }) {
@@ -2502,7 +2502,7 @@ function PhotoGallery({ title, photos, T }) {
               onClick={() => setPreview(p)}
               className="block overflow-hidden rounded-2xl border bg-white p-2 text-left shadow hover:ring-2 hover:ring-orange-400"
             >
-              <img src={p} className="h-40 w-full rounded-xl object-cover" />
+              <img loading="lazy" decoding="async" src={p} className="h-40 w-full rounded-xl object-cover" />
             </button>
           ))}
         </div>
@@ -2516,7 +2516,7 @@ function PhotoGallery({ title, photos, T }) {
             <button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-sm font-black text-white">
               ×
             </button>
-            <img src={preview} className="max-h-[84vh] w-auto rounded-2xl object-contain" />
+            <img loading="lazy" decoding="async" src={preview} className="max-h-[84vh] w-auto rounded-2xl object-contain" />
           </div>
         </div>
       )}
@@ -2536,7 +2536,7 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
 
     for (const file of selectedFiles) {
       try {
-        const compressed = await compressImage(file, 1000, 0.65);
+        const compressed = await compressImage(file, 700, 0.45);
         setPhotos((prev) => [...prev, compressed]);
       } catch (e) {
         alert(T.preparePhotoError);
@@ -2644,7 +2644,7 @@ function HandoverPhotoModal({ T, context, history, setHistory, onClose }) {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {photos.map((p, i) => (
               <div key={i} className="relative overflow-hidden rounded-2xl border bg-white p-2 shadow-sm">
-                <img src={p} className="h-32 w-full rounded-xl object-cover" />
+                <img loading="lazy" decoding="async" src={p} className="h-32 w-full rounded-xl object-cover" />
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
