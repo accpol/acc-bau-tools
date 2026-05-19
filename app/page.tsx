@@ -222,6 +222,36 @@ const I18N = {
     removeAttachment: "Usuń załącznik",
     attachmentPrepareError: "Nie udało się przygotować załącznika. Spróbuj mniejszy plik.",
     cameraError: "Nie udało się otworzyć aparatu. Sprawdź zgodę na kamerę oraz HTTPS.",
+    alertsDashboardTitle: "Dashboard alarmów",
+    alertsDashboardHint: "Kliknij kafelek, żeby filtrować. Kliknij ponownie, żeby odznaczyć i wrócić do wszystkich.",
+    alarmFailures: "Awarie",
+    alarmQrIssues: "QR do wymiany",
+    alarmInspectionWarnings: "Przeglądy / braki",
+    alarmUnassigned: "Bez osoby",
+    alarmNoLocation: "Bez lokalizacji",
+    active: "Aktywny",
+    dayReport: "Raport dnia",
+    dayReportSubtitle: "Dzisiejsze przekazania, awarie i serwisy",
+    printDayReport: "Drukuj raport",
+    noEntriesToday: "Brak wpisów z dzisiaj.",
+    failures: "Awarie",
+    transfers: "Przekazania",
+    servicesInspections: "Serwis/przeglądy",
+    lastActivity: "Ostatnia aktywność",
+    serviceRepairCosts: "Koszty serwisu/napraw",
+    failurePriority: "Priorytet",
+    failureQuestion: "Co się stało?",
+    failurePlaceholder: "Np. uszkodzony kabel, nie działa, wyciek, pęknięcie...",
+    failurePhotos: "Zdjęcia awarii / uszkodzeń",
+    takePhoto: "Zrób zdjęcie",
+    uploadFile: "Wgraj plik",
+    priorityLow: "niski",
+    priorityMedium: "średni",
+    priorityUrgent: "pilny",
+    phoneSpeedRepair: "Naprawa szybkości telefonu",
+    phoneSpeedRepairHint: "Odchudza istniejące zdjęcia zapisane w bazie. Nie usuwa danych ani zdjęć, tylko zmniejsza ich wagę, żeby aplikacja działała na telefonie.",
+    optimizePhotosInDb: "Odchudź zdjęcia w bazie",
+    toolPdfCard: "Karta PDF",
   },
   en: {
     appTitle: "ACC Bau Tool Control",
@@ -405,6 +435,36 @@ const I18N = {
     removeAttachment: "Remove attachment",
     attachmentPrepareError: "Could not prepare the attachment. Try a smaller file.",
     cameraError: "Could not open camera. Check camera permission and HTTPS.",
+    alertsDashboardTitle: "Alarm dashboard",
+    alertsDashboardHint: "Click a tile to filter. Click again to clear it and show all tools.",
+    alarmFailures: "Failures",
+    alarmQrIssues: "QR replacement",
+    alarmInspectionWarnings: "Inspections / missing",
+    alarmUnassigned: "No holder",
+    alarmNoLocation: "No location",
+    active: "Active",
+    dayReport: "Daily report",
+    dayReportSubtitle: "Today’s handovers, failures and service entries",
+    printDayReport: "Print report",
+    noEntriesToday: "No entries today.",
+    failures: "Failures",
+    transfers: "Handovers",
+    servicesInspections: "Service/inspections",
+    lastActivity: "Last activity",
+    serviceRepairCosts: "Service/repair costs",
+    failurePriority: "Priority",
+    failureQuestion: "What happened?",
+    failurePlaceholder: "E.g. damaged cable, not working, leak, crack...",
+    failurePhotos: "Failure / damage photos",
+    takePhoto: "Take photo",
+    uploadFile: "Upload file",
+    priorityLow: "low",
+    priorityMedium: "medium",
+    priorityUrgent: "urgent",
+    phoneSpeedRepair: "Phone speed repair",
+    phoneSpeedRepairHint: "Optimizes existing photos stored in the database. It does not delete data or photos, it only reduces file size so the app works better on phones.",
+    optimizePhotosInDb: "Optimize photos in database",
+    toolPdfCard: "Tool PDF card",
   },
   de: {
     appTitle: "ACC Bau Werkzeugverwaltung",
@@ -588,6 +648,36 @@ const I18N = {
     removeAttachment: "Anhang entfernen",
     attachmentPrepareError: "Anhang konnte nicht vorbereitet werden. Versuchen Sie eine kleinere Datei.",
     cameraError: "Kamera konnte nicht geöffnet werden. Prüfen Sie Kameraberechtigung und HTTPS.",
+    alertsDashboardTitle: "Alarm-Dashboard",
+    alertsDashboardHint: "Klicken Sie auf eine Kachel zum Filtern. Nochmals klicken, um den Filter zu entfernen und alles anzuzeigen.",
+    alarmFailures: "Störungen",
+    alarmQrIssues: "QR ersetzen",
+    alarmInspectionWarnings: "Prüfungen / fehlend",
+    alarmUnassigned: "Ohne Besitzer",
+    alarmNoLocation: "Ohne Standort",
+    active: "Aktiv",
+    dayReport: "Tagesbericht",
+    dayReportSubtitle: "Heutige Übergaben, Störungen und Serviceeinträge",
+    printDayReport: "Bericht drucken",
+    noEntriesToday: "Keine Einträge von heute.",
+    failures: "Störungen",
+    transfers: "Übergaben",
+    servicesInspections: "Service/Prüfungen",
+    lastActivity: "Letzte Aktivität",
+    serviceRepairCosts: "Service-/Reparaturkosten",
+    failurePriority: "Priorität",
+    failureQuestion: "Was ist passiert?",
+    failurePlaceholder: "Z.B. Kabel beschädigt, funktioniert nicht, Leck, Riss...",
+    failurePhotos: "Fotos der Störung / Schäden",
+    takePhoto: "Foto aufnehmen",
+    uploadFile: "Datei hochladen",
+    priorityLow: "niedrig",
+    priorityMedium: "mittel",
+    priorityUrgent: "dringend",
+    phoneSpeedRepair: "Telefon-Geschwindigkeit verbessern",
+    phoneSpeedRepairHint: "Optimiert vorhandene Fotos in der Datenbank. Es werden keine Daten oder Fotos gelöscht, nur die Dateigröße reduziert, damit die App auf dem Telefon besser läuft.",
+    optimizePhotosInDb: "Fotos in der Datenbank optimieren",
+    toolPdfCard: "Gerätekarte PDF",
   },
 };
 
@@ -1557,7 +1647,7 @@ export default function App() {
     updateTool(
       updated,
       T.failureReported || "Zgłoszono awarię",
-      `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}${priority ? ` • Priorytet: ${priority}` : ""}${note ? ` • ${note}` : ""}`,
+      `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}${priority ? ` • ${T.failurePriority || "Priorytet"}: ${priority}` : ""}${note ? ` • ${note}` : ""}`,
       { historyExtra: { attachments, priority, failureNote: note } }
     );
     setShowFailureModal(false);
@@ -2283,8 +2373,8 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
 
         {(tool.status === "Awaria" || tool.status === "Uszkodzone") && <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700"><AlertTriangle className="mr-2 inline h-4 w-4" /> {T.failureStatus || "Awaria"}</div>}
         {tool.qrIssue && <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800"><ScanLine className="mr-2 inline h-4 w-4" /> {T.qrAlarmStatus || "QR nieczytelne — potrzebna nowa naklejka"}</div>}
-        {lastActivity && <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700"><b>Ostatnia aktywność:</b> {historyActionText(lastActivity.action, T)} • {historyDetailsText(lastActivity.details, T)} • {lastActivity.date}</div>}
-        {totalCost > 0 && <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-black text-orange-800">Koszty serwisu/napraw: {totalCost.toFixed(2)}</div>}
+        {lastActivity && <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700"><b>{T.lastActivity || "Ostatnia aktywność"}:</b> {historyActionText(lastActivity.action, T)} • {historyDetailsText(lastActivity.details, T)} • {lastActivity.date}</div>}
+        {totalCost > 0 && <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-black text-orange-800">{T.serviceRepairCosts || "Koszty serwisu/napraw"}: {totalCost.toFixed(2)}</div>}
 
         <div className="mt-5 grid gap-3 text-sm">
           <Info label={T.status} value={tool.status || "—"} />
@@ -2314,7 +2404,7 @@ function ToolDetails({ T, tool, isAdmin, history, onEdit, onDelete, onTransfer, 
           </Button>
           {isAdmin && <Button onClick={onReturn} variant="outline" className="rounded-2xl"><PackageX className="mr-2 h-4 w-4" /> {T.returnTool}</Button>}
           {isAdmin && <Button onClick={onPrint} variant="outline" className="rounded-2xl"><Printer className="mr-2 h-4 w-4" /> {T.printQr}</Button>}
-          <Button onClick={onPrintCard} variant="outline" className="rounded-2xl"><ClipboardList className="mr-2 h-4 w-4" /> Karta PDF</Button>
+          <Button onClick={onPrintCard} variant="outline" className="rounded-2xl"><ClipboardList className="mr-2 h-4 w-4" /> {T.toolPdfCard || "Karta PDF"}</Button>
           <Button onClick={onPrintHistory} variant="outline" className="rounded-2xl"><History className="mr-2 h-4 w-4" /> {T.printHistory}</Button>
           {isAdmin && <Button onClick={onEdit} variant="outline" className="rounded-2xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
           {isAdmin && <Button onClick={onDelete} variant="outline" className="rounded-2xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
@@ -2668,11 +2758,11 @@ function InspectionModal({ T, onClose, onSave }) {
 
 function AlertsDashboard({ T, alarmStats, activeFilter, onToggleFilter, onDayReport }) {
   const items = [
-    { key: "failures", label: "Awarie", value: alarmStats.failures.length, cls: "bg-red-50 border-red-200 text-red-700", activeCls: "ring-red-500 bg-red-100 border-red-400" },
-    { key: "qrIssues", label: "QR do wymiany", value: alarmStats.qrIssues.length, cls: "bg-amber-50 border-amber-200 text-amber-800", activeCls: "ring-amber-500 bg-amber-100 border-amber-400" },
-    { key: "inspectionWarnings", label: "Przeglądy / braki", value: alarmStats.inspectionWarnings.length, cls: "bg-orange-50 border-orange-200 text-orange-800", activeCls: "ring-orange-500 bg-orange-100 border-orange-400" },
-    { key: "unassigned", label: "Bez osoby", value: alarmStats.unassigned.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
-    { key: "noLocation", label: "Bez lokalizacji", value: alarmStats.noLocation.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
+    { key: "failures", label: T.alarmFailures || "Awarie", value: alarmStats.failures.length, cls: "bg-red-50 border-red-200 text-red-700", activeCls: "ring-red-500 bg-red-100 border-red-400" },
+    { key: "qrIssues", label: T.alarmQrIssues || "QR do wymiany", value: alarmStats.qrIssues.length, cls: "bg-amber-50 border-amber-200 text-amber-800", activeCls: "ring-amber-500 bg-amber-100 border-amber-400" },
+    { key: "inspectionWarnings", label: T.alarmInspectionWarnings || "Przeglądy / braki", value: alarmStats.inspectionWarnings.length, cls: "bg-orange-50 border-orange-200 text-orange-800", activeCls: "ring-orange-500 bg-orange-100 border-orange-400" },
+    { key: "unassigned", label: T.alarmUnassigned || "Bez osoby", value: alarmStats.unassigned.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
+    { key: "noLocation", label: T.alarmNoLocation || "Bez lokalizacji", value: alarmStats.noLocation.length, cls: "bg-zinc-50 border-zinc-200 text-zinc-700", activeCls: "ring-zinc-500 bg-zinc-100 border-zinc-400" },
   ];
 
   return (
@@ -2680,11 +2770,11 @@ function AlertsDashboard({ T, alarmStats, activeFilter, onToggleFilter, onDayRep
       <CardContent className="p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-black">Dashboard alarmów</h2>
-            <p className="text-sm text-zinc-500">Kliknij kafelek, żeby filtrować. Kliknij ponownie, żeby odznaczyć i wrócić do wszystkich.</p>
+            <h2 className="text-lg font-black">{T.alertsDashboardTitle || "Dashboard alarmów"}</h2>
+            <p className="text-sm text-zinc-500">{T.alertsDashboardHint || "Kliknij kafelek, żeby filtrować. Kliknij ponownie, żeby odznaczyć i wrócić do wszystkich."}</p>
           </div>
           <Button onClick={onDayReport} className="rounded-2xl bg-zinc-950 text-white hover:bg-zinc-800">
-            <ClipboardList className="mr-2 h-4 w-4" /> Raport dnia
+            <ClipboardList className="mr-2 h-4 w-4" /> {T.dayReport || "Raport dnia"}
           </Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -2702,7 +2792,7 @@ function AlertsDashboard({ T, alarmStats, activeFilter, onToggleFilter, onDayRep
                     <div className="text-2xl font-black">{item.value}</div>
                     <div className="text-xs font-black uppercase tracking-wide">{item.label}</div>
                   </div>
-                  {active && <div className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase">aktywny</div>}
+                  {active && <div className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase">{T.active || "Aktywny"}</div>}
                 </div>
               </button>
             );
@@ -2721,7 +2811,7 @@ function DayReportModal({ T, history, tools, onClose }) {
   const services = rows.filter((h) => String(h.action || "").includes("Serwis") || String(h.action || "").includes("Przegl"));
 
   function print() {
-    const html = `<html><head><meta charset="UTF-8"><title>Raport dnia</title><style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ccc;padding:7px}th{background:#111;color:#fff}</style></head><body><h1>ACC BAU • Raport dnia</h1><p>${new Date().toLocaleString("pl-PL")}</p><p>Awarie: <b>${failures.length}</b> • Przekazania: <b>${transfers.length}</b> • Serwis/przeglądy: <b>${services.length}</b></p><table><thead><tr><th>Data</th><th>Sprzęt</th><th>Akcja</th><th>Szczegóły</th><th>Od</th><th>Do</th></tr></thead><tbody>${rows.map((h)=>`<tr><td>${h.date||""}</td><td>${h.toolName||h.toolId||""}</td><td>${historyActionText(h.action,T)}</td><td>${historyDetailsText(h.details,T)}</td><td>${h.from||"—"}</td><td>${h.to||"—"}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
+    const html = `<html><head><meta charset="UTF-8"><title>${T.dayReport || "Raport dnia"}</title><style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ccc;padding:7px}th{background:#111;color:#fff}</style></head><body><h1>ACC BAU • ${T.dayReport || "Raport dnia"}</h1><p>${new Date().toLocaleString("pl-PL")}</p><p>${T.failures || "Awarie"}: <b>${failures.length}</b> • ${T.transfers || "Przekazania"}: <b>${transfers.length}</b> • ${T.servicesInspections || "Serwis/przeglądy"}: <b>${services.length}</b></p><table><thead><tr><th>${T.date}</th><th>${T.equipment}</th><th>${T.action}</th><th>${T.details}</th><th>${T.from}</th><th>${T.to}</th></tr></thead><tbody>${rows.map((h)=>`<tr><td>${h.date||""}</td><td>${h.toolName||h.toolId||""}</td><td>${historyActionText(h.action,T)}</td><td>${historyDetailsText(h.details,T)}</td><td>${h.from||"—"}</td><td>${h.to||"—"}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
     w.document.write(html);
     w.document.close();
@@ -2729,20 +2819,20 @@ function DayReportModal({ T, history, tools, onClose }) {
 
   return (
     <Modal wide>
-      <ModalHeader title="Raport dnia" subtitle="Dzisiejsze przekazania, awarie i serwisy" onClose={onClose} />
+      <ModalHeader title={T.dayReport || "Raport dnia"} subtitle={T.dayReportSubtitle || "Dzisiejsze przekazania, awarie i serwisy"} onClose={onClose} />
       <div className="p-5">
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <StatMini label="Awarie" value={failures.length} />
-          <StatMini label="Przekazania" value={transfers.length} />
-          <StatMini label="Serwis/przeglądy" value={services.length} />
+          <StatMini label={T.failures || "Awarie"} value={failures.length} />
+          <StatMini label={T.transfers || "Przekazania"} value={transfers.length} />
+          <StatMini label={T.servicesInspections || "Serwis/przeglądy"} value={services.length} />
         </div>
-        <div className="mb-4 flex justify-end"><Button onClick={print} className="rounded-2xl bg-zinc-950 text-white"><Printer className="mr-2 h-4 w-4" /> Drukuj raport</Button></div>
+        <div className="mb-4 flex justify-end"><Button onClick={print} className="rounded-2xl bg-zinc-950 text-white"><Printer className="mr-2 h-4 w-4" /> {T.printDayReport || "Drukuj raport"}</Button></div>
         <div className="max-h-[60vh] overflow-auto rounded-2xl border">
           <table className="w-full min-w-[760px] text-left text-xs">
-            <thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">Data</th><th className="p-3">Sprzęt</th><th className="p-3">Akcja</th><th className="p-3">Szczegóły</th><th className="p-3">Od</th><th className="p-3">Do</th></tr></thead>
+            <thead className="sticky top-0 bg-zinc-950 text-white"><tr><th className="p-3">{T.date}</th><th className="p-3">{T.equipment}</th><th className="p-3">{T.action}</th><th className="p-3">{T.details}</th><th className="p-3">{T.from}</th><th className="p-3">{T.to}</th></tr></thead>
             <tbody>{rows.map((h) => { const tool = tools.find((t) => t.id === h.toolId); return <tr key={h.id} className="border-t odd:bg-zinc-50"><td className="p-3">{h.date}</td><td className="p-3 font-bold">{h.toolName || tool?.name || h.toolId}</td><td className="p-3">{historyActionText(h.action, T)}</td><td className="p-3">{historyDetailsText(h.details, T)}</td><td className="p-3">{h.from || "—"}</td><td className="p-3">{h.to || "—"}</td></tr>; })}</tbody>
           </table>
-          {!rows.length && <div className="p-6 text-sm text-zinc-500">Brak wpisów z dzisiaj.</div>}
+          {!rows.length && <div className="p-6 text-sm text-zinc-500">{T.noEntriesToday || "Brak wpisów z dzisiaj."}</div>}
         </div>
       </div>
     </Modal>
@@ -2755,7 +2845,7 @@ function StatMini({ label, value }) {
 
 function FailureReportModal({ T, tool, onClose, onSave }) {
   const [note, setNote] = useState("");
-  const [priority, setPriority] = useState("średni");
+  const [priority, setPriority] = useState(T.priorityMedium || "średni");
   const [attachments, setAttachments] = useState([]);
   const [preparing, setPreparing] = useState(false);
   const cameraRef = useRef(null);
@@ -2782,15 +2872,15 @@ function FailureReportModal({ T, tool, onClose, onSave }) {
 
   return (
     <Modal>
-      <ModalHeader title="Zgłoś awarię" subtitle={`${tool.name} • ${tool.id}`} onClose={onClose} />
+      <ModalHeader title={T.reportFailure || "Zgłoś awarię"} subtitle={`${tool.name} • ${tool.id}`} onClose={onClose} />
       <div className="grid gap-4 p-6">
-        <FormSelect label="Priorytet" value={priority} options={["niski", "średni", "pilny"]} onChange={setPriority} />
-        <label className="block"><span className="mb-1 block text-xs font-bold text-zinc-500">Co się stało?</span><textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-28 w-full rounded-xl border px-3 py-2" placeholder="Np. uszkodzony kabel, nie działa, wyciek, pęknięcie..." /></label>
+        <FormSelect label={T.failurePriority || "Priorytet"} value={priority} options={[T.priorityLow || "niski", T.priorityMedium || "średni", T.priorityUrgent || "pilny"]} onChange={setPriority} />
+        <label className="block"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.failureQuestion || "Co się stało?"}</span><textarea value={note} onChange={(e) => setNote(e.target.value)} className="min-h-28 w-full rounded-xl border px-3 py-2" placeholder={T.failurePlaceholder || "Np. uszkodzony kabel, nie działa, wyciek, pęknięcie..."} /></label>
         <div className="rounded-2xl border bg-zinc-50 p-4">
-          <div className="mb-3 text-sm font-black">Zdjęcia awarii / uszkodzeń</div>
+          <div className="mb-3 text-sm font-black">{T.failurePhotos || "Zdjęcia awarii / uszkodzeń"}</div>
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple onChange={(e) => addFiles(e.target.files)} className="hidden" />
           <input ref={uploadRef} type="file" accept="image/*,application/pdf" multiple onChange={(e) => addFiles(e.target.files)} className="hidden" />
-          <div className="grid gap-3 sm:grid-cols-2"><Button type="button" onClick={() => cameraRef.current?.click()} className="rounded-2xl bg-emerald-600 py-5 font-black">Zrób zdjęcie</Button><Button type="button" variant="outline" onClick={() => uploadRef.current?.click()} className="rounded-2xl py-5 font-black">Wgraj plik</Button></div>
+          <div className="grid gap-3 sm:grid-cols-2"><Button type="button" onClick={() => cameraRef.current?.click()} className="rounded-2xl bg-emerald-600 py-5 font-black">{T.takePhoto || "Zrób zdjęcie"}</Button><Button type="button" variant="outline" onClick={() => uploadRef.current?.click()} className="rounded-2xl py-5 font-black">{T.uploadFile || "Wgraj plik"}</Button></div>
           {preparing && <div className="mt-3 text-sm font-bold">{T.saving}</div>}
           <AttachmentGallery attachments={attachments} T={T} compact />
         </div>
@@ -2854,7 +2944,7 @@ function SettingsModal({ T, settings, setSettings, onClose, onOptimizeDatabase }
     }
   }
 
-  return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><div className="mx-6 mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4"><div className="text-sm font-black text-orange-900">Naprawa szybkości telefonu</div><p className="mt-1 text-xs text-orange-800">Odchudza istniejące zdjęcia zapisane w bazie. Nie usuwa danych ani zdjęć, tylko zmniejsza ich wagę, żeby aplikacja działała na telefonie.</p><Button type="button" onClick={onOptimizeDatabase} className="mt-3 rounded-xl bg-orange-600 text-white hover:bg-orange-500">Odchudź zdjęcia w bazie</Button></div><ModalFooter T={T} onClose={onClose} onSave={save} saving={saving} /></Modal>;
+  return <Modal wide><ModalHeader title={T.settings} subtitle={T.settingsHint} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-5"><TextList title={T.workers} value={people} setValue={setPeople} /><TextList title={T.sites} value={projects} setValue={setProjects} /><TextList title={T.categories} value={categories} setValue={setCategories} /><TextList title={T.pins} value={pins} setValue={setPins} /><TextList title={T.roles} value={roles} setValue={setRoles} /></div><div className="mx-6 mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4"><div className="text-sm font-black text-orange-900">{T.phoneSpeedRepair || "Naprawa szybkości telefonu"}</div><p className="mt-1 text-xs text-orange-800">{T.phoneSpeedRepairHint || "Odchudza istniejące zdjęcia zapisane w bazie. Nie usuwa danych ani zdjęć, tylko zmniejsza ich wagę, żeby aplikacja działała na telefonie."}</p><Button type="button" onClick={onOptimizeDatabase} className="mt-3 rounded-xl bg-orange-600 text-white hover:bg-orange-500">{T.optimizePhotosInDb || "Odchudź zdjęcia w bazie"}</Button></div><ModalFooter T={T} onClose={onClose} onSave={save} saving={saving} /></Modal>;
 }
 
 function TransferModal({ T, code, tool, onClose }) {
