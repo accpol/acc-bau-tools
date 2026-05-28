@@ -277,6 +277,12 @@ const I18N = {
     ppeQrHint: "Mały QR dla kasku, szelek, butów lub kurtki.",
     ppeDashboardExpired: "PPE po terminie",
     ppeDashboardSoon: "PPE do kontroli",
+    ppeDashboardReplacement: "PPE do wymiany",
+    ppeNeedReplacement: "Wymaga wymiany",
+    ppeReplacementRequested: "Zgłoszono wymianę PPE",
+    ppeReplacementCleared: "Wymiana PPE zamknięta",
+    ppeReplacementDetails: "Użytkownik zgłosił, że PPE wymaga wymiany",
+    ppeWorkerCannotClearReplacement: "Tylko admin może zdjąć status wymiany.",
     ppeAllEmployees: "Wszyscy pracownicy",
     ppeHistoryNote: "Historia PPE jest zapisywana razem z ustawieniami i nie kasuje narzędzi ani zdjęć.",
     ppeSaveError: "Nie udało się zapisać PPE:",
@@ -539,6 +545,12 @@ const I18N = {
     ppeQrHint: "Small QR for helmet, harness, shoes or jacket.",
     ppeDashboardExpired: "Expired PPE",
     ppeDashboardSoon: "PPE due soon",
+    ppeDashboardReplacement: "PPE needs replacement",
+    ppeNeedReplacement: "Needs replacement",
+    ppeReplacementRequested: "PPE replacement reported",
+    ppeReplacementCleared: "PPE replacement cleared",
+    ppeReplacementDetails: "User reported that this PPE needs replacement",
+    ppeWorkerCannotClearReplacement: "Only admin can clear replacement status.",
     ppeAllEmployees: "All employees",
     ppeHistoryNote: "PPE history is saved in settings and does not delete tools or photos.",
     ppeSaveError: "Could not save PPE:",
@@ -801,6 +813,12 @@ const I18N = {
     ppeQrHint: "Kleiner QR für Helm, Auffanggurt, Schuhe oder Jacke.",
     ppeDashboardExpired: "PSA abgelaufen",
     ppeDashboardSoon: "PSA bald fällig",
+    ppeDashboardReplacement: "PSA zum Austausch",
+    ppeNeedReplacement: "Austausch erforderlich",
+    ppeReplacementRequested: "PSA-Austausch gemeldet",
+    ppeReplacementCleared: "PSA-Austausch erledigt",
+    ppeReplacementDetails: "Benutzer hat gemeldet, dass diese PSA ausgetauscht werden muss",
+    ppeWorkerCannotClearReplacement: "Nur Admin kann den Austausch-Status entfernen.",
     ppeAllEmployees: "Alle Mitarbeiter",
     ppeHistoryNote: "PSA-Historie wird in den Einstellungen gespeichert und löscht keine Werkzeuge oder Fotos.",
     ppeSaveError: "PSA konnte nicht gespeichert werden:",
@@ -1865,6 +1883,34 @@ export default function App() {
     savePpeRecords(ppeRecords.filter((p) => p.id !== id));
   }
 
+  function togglePpeReplacement(id) {
+    const current = ppeRecords.find((p) => p.id === id);
+    if (!current) return;
+    const hasReplacement = !!current.needsReplacement;
+
+    if (hasReplacement && !isAdmin) {
+      return alert(T.ppeWorkerCannotClearReplacement || T.noPermission);
+    }
+
+    const updated = {
+      ...current,
+      needsReplacement: !hasReplacement,
+      replacementRequestedAt: hasReplacement ? "" : new Date().toLocaleString("pl-PL"),
+      replacementRequestedBy: hasReplacement ? "" : (user || ""),
+      history: [
+        {
+          date: new Date().toLocaleString("pl-PL"),
+          user,
+          action: hasReplacement ? (T.ppeReplacementCleared || "Wymiana PPE zamknięta") : (T.ppeReplacementRequested || "Zgłoszono wymianę PPE"),
+        },
+        ...(Array.isArray(current.history) ? current.history : []),
+      ],
+    };
+
+    const next = [updated, ...ppeRecords.filter((p) => p.id !== id)];
+    savePpeRecords(next);
+  }
+
   function printPpeLabel(ppe) {
     const url = ppePublicLink(ppe.id);
     const html = `<!doctype html>
@@ -2377,7 +2423,7 @@ export default function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         {activeModule === "ppe" ? (
-          <PpePage T={T} isAdmin={isAdmin} settings={settings} records={ppeRecords} onSave={upsertPpeRecord} onDelete={deletePpeRecord} onPrintQr={printPpeLabel} onPrintEmployeeCard={printPpeEmployeeCard} />
+          <PpePage T={T} isAdmin={isAdmin} settings={settings} records={ppeRecords} onSave={upsertPpeRecord} onDelete={deletePpeRecord} onPrintQr={printPpeLabel} onPrintEmployeeCard={printPpeEmployeeCard} onToggleReplacement={togglePpeReplacement} />
         ) : (
           <>
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -3633,6 +3679,7 @@ function ppeRequiredCanonicalTypes() {
 
 
 function ppeDueStatus(item, T) {
+  if (item?.needsReplacement) return { danger: true, label: T.ppeNeedReplacement || "Wymaga wymiany", cls: "bg-red-100 text-red-700 border-red-200" };
   if (item.status && item.status !== "OK") {
     const danger = item.status === "Uszkodzone" || item.status === "Zgubione" || item.status === "Damaged" || item.status === "Lost";
     return { danger, label: item.status, cls: danger ? "bg-red-100 text-red-700 border-red-200" : "bg-amber-100 text-amber-700 border-amber-200" };
@@ -3644,7 +3691,7 @@ function ppeDueStatus(item, T) {
   return { danger: false, label: T.ppeStatusOk || "OK", cls: "bg-green-100 text-green-700 border-green-200" };
 }
 
-function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, onPrintEmployeeCard }) {
+function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, onPrintEmployeeCard, onToggleReplacement }) {
   const [person, setPerson] = useState(settings.people?.[0] || "");
   const [query, setQuery] = useState("");
   const [ppeFilter, setPpeFilter] = useState("");
@@ -3659,6 +3706,7 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
     issuedDate: today(),
     expiryDate: "",
     status: "OK",
+    needsReplacement: false,
     notes: "",
     photo: "",
     history: [],
@@ -3670,8 +3718,9 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
     const due = daysUntil(r.expiryDate);
     const filterMatch =
       !ppeFilter ||
+      (ppeFilter === "replacement" && !!r.needsReplacement) ||
       (ppeFilter === "expired" && r.expiryDate && due < 0) ||
-      (ppeFilter === "soon" && r.expiryDate && due >= 0 && due <= 30);
+      (ppeFilter === "soon" && r.expiryDate && due >= 0 && due <= 30 && !r.needsReplacement);
     return filterMatch && (!person || r.person === person) && txt.includes(query.toLowerCase());
   });
 
@@ -3681,8 +3730,9 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
 
   const ppeTypes = ppeBaseTypes(T);
   const ppeStatuses = ["OK", T.ppeStatusWarning || "Do kontroli", T.ppeStatusDamaged || "Uszkodzone", T.ppeStatusLost || "Zgubione"];
+  const replacementCount = records.filter((r) => !!r.needsReplacement).length;
   const expiredCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) < 0).length;
-  const soonCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) >= 0 && daysUntil(r.expiryDate) <= 30).length;
+  const soonCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) >= 0 && daysUntil(r.expiryDate) <= 30 && !r.needsReplacement).length;
 
   return (
     <section className="space-y-5">
@@ -3705,9 +3755,12 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <button type="button" onClick={() => { setPpeFilter(""); }} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "" ? "rounded-[28px] ring-2 ring-zinc-900 ring-offset-2" : ""}`}>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button type="button" onClick={() => setPpeFilter("")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "" ? "rounded-[28px] ring-2 ring-zinc-900 ring-offset-2" : ""}`}>
               <StatCard icon={<User />} label={T.ppeEmployees || "Pracownicy PPE"} value={people.length} />
+            </button>
+            <button type="button" onClick={() => togglePpeFilter("replacement")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "replacement" ? "rounded-[28px] ring-2 ring-red-600 ring-offset-2" : ""}`}>
+              <StatCard icon={<PackageX />} label={T.ppeDashboardReplacement || T.ppeNeedReplacement || "PPE do wymiany"} value={replacementCount} danger={replacementCount > 0} />
             </button>
             <button type="button" onClick={() => togglePpeFilter("expired")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "expired" ? "rounded-[28px] ring-2 ring-red-600 ring-offset-2" : ""}`}>
               <StatCard icon={<AlertTriangle />} label={T.ppeDashboardExpired || "PPE po terminie"} value={expiredCount} danger={expiredCount > 0} />
@@ -3715,6 +3768,19 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
             <button type="button" onClick={() => togglePpeFilter("soon")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "soon" ? "rounded-[28px] ring-2 ring-amber-500 ring-offset-2" : ""}`}>
               <StatCard icon={<ClipboardList />} label={T.ppeDashboardSoon || "PPE do kontroli"} value={soonCount} danger={soonCount > 0} />
             </button>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-black">{T.ppeEmployeeSummary || "Podsumowanie PPE pracownika"}</div>
+                <div className="mt-1 text-xs text-zinc-500">{person || T.ppeAllEmployees || "Wszyscy pracownicy"}</div>
+              </div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800">
+                {T.ppeIssuedItems || "Wydane środki ochrony"}: {records.filter((r) => !person || r.person === person).length}
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-zinc-500">{T.ppeSuggested || "Podpowiedź: dla nowych pracowników sprawdź kask, buty, kamizelkę, rękawice i okulary."}</div>
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[260px_1fr]">
@@ -3740,9 +3806,10 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
                 <Search className="h-4 w-4 text-zinc-400" />
                 <input className="w-full bg-transparent text-sm outline-none" placeholder={T.search || "Szukaj..."} value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
+
               {ppeFilter && (
-                <div className="mb-3 flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-black text-orange-800">
-                  <span>{T.active || "Aktywny"}: {ppeFilter === "expired" ? (T.ppeDashboardExpired || "PPE po terminie") : (T.ppeDashboardSoon || "PPE do kontroli")}</span>
+                <div className="mb-3 flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800">
+                  <span>{T.active || "Aktywny"}: {ppeFilter === "replacement" ? (T.ppeDashboardReplacement || T.ppeNeedReplacement || "PPE do wymiany") : ppeFilter === "expired" ? (T.ppeDashboardExpired || "PPE po terminie") : (T.ppeDashboardSoon || "PPE do kontroli")}</span>
                   <button type="button" onClick={() => setPpeFilter("")} className="rounded-xl bg-white px-2 py-1 text-orange-700 shadow-sm">{T.cancel || "Anuluj"}</button>
                 </div>
               )}
@@ -3752,7 +3819,7 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
                 {currentRecords.map((item) => {
                   const st = ppeDueStatus(item, T);
                   return (
-                    <div key={item.id} className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+                    <div key={item.id} className={`rounded-3xl border bg-white p-4 shadow-sm ${item.needsReplacement ? "border-red-300 ring-2 ring-red-100" : "border-zinc-200"}`}>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -3765,11 +3832,13 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
                             <div><b>{T.serial || "Serial"}:</b> {item.serial || "—"}</div>
                             <div><b>{T.ppeIssuedDate || "Data wydania"}:</b> {item.issuedDate || "—"}</div>
                             <div><b>{T.ppeExpiryDate || "Data ważności"}:</b> {item.expiryDate || "—"}</div>
+                            {item.needsReplacement && <div className="text-red-700"><b>{T.ppeNeedReplacement || "Wymaga wymiany"}</b>{item.replacementRequestedBy ? ` • ${item.replacementRequestedBy}` : ""}</div>}
                           </div>
                           {item.notes && <p className="mt-2 rounded-2xl bg-zinc-50 p-3 text-sm text-zinc-700">{item.notes}</p>}
                           <p className="mt-2 text-xs text-zinc-400">{T.ppeQrHint || "Mały QR dla PPE."}</p>
                         </div>
                         <div className="flex flex-wrap gap-2 sm:justify-end">
+                          <Button variant="outline" onClick={() => onToggleReplacement(item.id)} className={`rounded-xl ${item.needsReplacement ? "border-red-500 bg-red-600 text-white hover:bg-red-500" : "text-red-600"}`}><AlertTriangle className="mr-2 h-4 w-4" /> {T.ppeNeedReplacement || "Wymaga wymiany"}</Button>
                           <Button variant="outline" onClick={() => onPrintQr(item)} className="rounded-xl"><Printer className="mr-2 h-4 w-4" /> {T.printPpeQr || "Drukuj mały QR"}</Button>
                           {isAdmin && <Button variant="outline" onClick={() => setEditing(item)} className="rounded-xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
                           {isAdmin && <Button variant="outline" onClick={() => onDelete(item.id)} className="rounded-xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
