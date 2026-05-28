@@ -252,6 +252,35 @@ const I18N = {
     phoneSpeedRepairHint: "Odchudza istniejące zdjęcia zapisane w bazie. Nie usuwa danych ani zdjęć, tylko zmniejsza ich wagę, żeby aplikacja działała na telefonie.",
     optimizePhotosInDb: "Odchudź zdjęcia w bazie",
     toolPdfCard: "Karta PDF",
+    ppe: "PPE / ŚOI",
+    ppeSubtitle: "Środki ochrony indywidualnej pracowników",
+    ppeEmployees: "Pracownicy PPE",
+    ppeEquipment: "Wyposażenie PPE",
+    addPpe: "Dodaj PPE",
+    editPpe: "Edytuj PPE",
+    deletePpe: "Usuń PPE",
+    printPpeQr: "Drukuj mały QR",
+    ppeType: "Rodzaj PPE",
+    ppeItem: "Nazwa / model",
+    ppeSize: "Rozmiar",
+    ppeIssuedDate: "Data wydania",
+    ppeExpiryDate: "Data ważności / przeglądu",
+    ppeStatusOk: "OK",
+    ppeStatusWarning: "Do kontroli",
+    ppeStatusExpired: "Po terminie",
+    ppeStatusLost: "Zgubione",
+    ppeStatusDamaged: "Uszkodzone",
+    ppeNoItems: "Brak PPE dla tego pracownika.",
+    ppePublicTitle: "ACC BAU • PPE INFORMATION",
+    ppePublicSubtitle: "Informacje po zeskanowaniu małego QR — bez logowania.",
+    ppeAssignedTo: "Przypisane do",
+    ppeQrHint: "Mały QR dla kasku, szelek, butów lub kurtki.",
+    ppeDashboardMissing: "Braki PPE",
+    ppeDashboardExpired: "PPE po terminie",
+    ppeDashboardSoon: "PPE do kontroli",
+    ppeAllEmployees: "Wszyscy pracownicy",
+    ppeHistoryNote: "Historia PPE jest zapisywana razem z ustawieniami i nie kasuje narzędzi ani zdjęć.",
+    ppeSaveError: "Nie udało się zapisać PPE:",
   },
   en: {
     appTitle: "ACC Bau Tool Control",
@@ -465,6 +494,35 @@ const I18N = {
     phoneSpeedRepairHint: "Optimizes existing photos stored in the database. It does not delete data or photos, it only reduces file size so the app works better on phones.",
     optimizePhotosInDb: "Optimize photos in database",
     toolPdfCard: "Tool PDF card",
+    ppe: "PPE",
+    ppeSubtitle: "Personal protective equipment per employee",
+    ppeEmployees: "PPE employees",
+    ppeEquipment: "PPE equipment",
+    addPpe: "Add PPE",
+    editPpe: "Edit PPE",
+    deletePpe: "Delete PPE",
+    printPpeQr: "Print small QR",
+    ppeType: "PPE type",
+    ppeItem: "Name / model",
+    ppeSize: "Size",
+    ppeIssuedDate: "Issue date",
+    ppeExpiryDate: "Expiry / inspection date",
+    ppeStatusOk: "OK",
+    ppeStatusWarning: "Check required",
+    ppeStatusExpired: "Expired",
+    ppeStatusLost: "Lost",
+    ppeStatusDamaged: "Damaged",
+    ppeNoItems: "No PPE for this employee.",
+    ppePublicTitle: "ACC BAU • PPE INFORMATION",
+    ppePublicSubtitle: "Information after scanning small QR — no login required.",
+    ppeAssignedTo: "Assigned to",
+    ppeQrHint: "Small QR for helmet, harness, shoes or jacket.",
+    ppeDashboardMissing: "Missing PPE",
+    ppeDashboardExpired: "Expired PPE",
+    ppeDashboardSoon: "PPE due soon",
+    ppeAllEmployees: "All employees",
+    ppeHistoryNote: "PPE history is saved in settings and does not delete tools or photos.",
+    ppeSaveError: "Could not save PPE:",
   },
   de: {
     appTitle: "ACC Bau Werkzeugverwaltung",
@@ -678,6 +736,35 @@ const I18N = {
     phoneSpeedRepairHint: "Optimiert vorhandene Fotos in der Datenbank. Es werden keine Daten oder Fotos gelöscht, nur die Dateigröße reduziert, damit die App auf dem Telefon besser läuft.",
     optimizePhotosInDb: "Fotos in der Datenbank optimieren",
     toolPdfCard: "Gerätekarte PDF",
+    ppe: "PSA",
+    ppeSubtitle: "Persönliche Schutzausrüstung pro Mitarbeiter",
+    ppeEmployees: "PSA-Mitarbeiter",
+    ppeEquipment: "PSA-Ausrüstung",
+    addPpe: "PSA hinzufügen",
+    editPpe: "PSA bearbeiten",
+    deletePpe: "PSA löschen",
+    printPpeQr: "Kleinen QR drucken",
+    ppeType: "PSA-Art",
+    ppeItem: "Name / Modell",
+    ppeSize: "Größe",
+    ppeIssuedDate: "Ausgabedatum",
+    ppeExpiryDate: "Ablauf-/Prüfdatum",
+    ppeStatusOk: "OK",
+    ppeStatusWarning: "Prüfung erforderlich",
+    ppeStatusExpired: "Abgelaufen",
+    ppeStatusLost: "Verloren",
+    ppeStatusDamaged: "Beschädigt",
+    ppeNoItems: "Keine PSA für diesen Mitarbeiter.",
+    ppePublicTitle: "ACC BAU • PSA INFORMATION",
+    ppePublicSubtitle: "Informationen nach kleinem QR-Scan — ohne Login.",
+    ppeAssignedTo: "Zugeordnet an",
+    ppeQrHint: "Kleiner QR für Helm, Auffanggurt, Schuhe oder Jacke.",
+    ppeDashboardMissing: "Fehlende PSA",
+    ppeDashboardExpired: "PSA abgelaufen",
+    ppeDashboardSoon: "PSA bald fällig",
+    ppeAllEmployees: "Alle Mitarbeiter",
+    ppeHistoryNote: "PSA-Historie wird in den Einstellungen gespeichert und löscht keine Werkzeuge oder Fotos.",
+    ppeSaveError: "PSA konnte nicht gespeichert werden:",
   },
 };
 
@@ -1159,6 +1246,8 @@ export default function App() {
   const [project, setProject] = useState("Wszystkie");
   const [person, setPerson] = useState("Wszystkie");
   const [dashboardFilter, setDashboardFilter] = useState("");
+  const [activeModule, setActiveModule] = useState("tools");
+  const [publicPpeId, setPublicPpeId] = useState("");
   const [showToolForm, setShowToolForm] = useState(false);
   const [toolForm, setToolForm] = useState(emptyTool);
   const [editing, setEditing] = useState(false);
@@ -1190,11 +1279,13 @@ export default function App() {
     const storedLang = localStorage.getItem(LANG_KEY) || "pl";
     const params = new URLSearchParams(window.location.search);
     const publicTool = params.get("publicTool");
+    const publicPpe = params.get("publicPpe");
     const transfer = params.get("transfer");
 
     setUser(u);
     setLang(storedLang);
     if (publicTool) setPublicToolId(publicTool);
+    if (publicPpe) setPublicPpeId(publicPpe);
     if (transfer) {
       setTransferCode(transfer);
       setShowClaim(true);
@@ -1676,6 +1767,96 @@ export default function App() {
   }
 
 
+  const ppeRecords = Array.isArray(settings.ppeRecords) ? settings.ppeRecords : [];
+
+  function ppePublicLink(id) {
+    if (typeof window === "undefined") return id;
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("publicPpe", id);
+    return url.toString();
+  }
+
+  async function savePpeRecords(nextRecords) {
+    const nextSettings = { ...settings, ppeRecords: nextRecords, updatedAt: new Date().toISOString() };
+    try {
+      await persistSettingsEverywhere(nextSettings, setSettings);
+    } catch (e) {
+      alert((T.ppeSaveError || "Nie udało się zapisać PPE:") + " " + (e?.message || e));
+    }
+  }
+
+  function upsertPpeRecord(record) {
+    const normalized = {
+      ...record,
+      id: record.id || `PPE-${String(Date.now())}`,
+      history: [
+        { date: new Date().toLocaleString("pl-PL"), user, action: record.id ? (T.edit || "Edytuj") : (T.add || "Dodaj") },
+        ...(Array.isArray(record.history) ? record.history : []),
+      ],
+    };
+    const next = [normalized, ...ppeRecords.filter((p) => p.id !== normalized.id)];
+    savePpeRecords(next);
+  }
+
+  function deletePpeRecord(id) {
+    if (!isAdmin) return alert(T.noPermission);
+    if (!confirm(T.deletePpe || "Usunąć PPE?")) return;
+    savePpeRecords(ppeRecords.filter((p) => p.id !== id));
+  }
+
+  function printPpeLabel(ppe) {
+    const url = ppePublicLink(ppe.id);
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>ACC BAU PPE QR</title>
+  <style>
+    @page { size: 50mm 25mm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { width:50mm; height:25mm; margin:0; padding:0; overflow:hidden; font-family:Arial, Helvetica, sans-serif; color:#111; background:#fff; }
+    .label { width:50mm; height:25mm; padding:2mm; display:flex; gap:2mm; align-items:center; border:0.3mm solid #111; }
+    .qr { width:18mm; height:18mm; border:0.2mm solid #111; padding:0.7mm; display:flex; align-items:center; justify-content:center; }
+    .qr img { width:16.2mm; height:16.2mm; display:block; }
+    .info { flex:1; min-width:0; overflow:hidden; }
+    .brand { font-size:8pt; font-weight:900; line-height:1; }
+    .tag { display:inline-block; margin-top:1mm; border:0.2mm solid #111; border-radius:0.8mm; padding:0.3mm 1mm; font-size:5.5pt; font-weight:900; }
+    .name { margin-top:1mm; font-size:8pt; font-weight:900; line-height:1.05; max-height:8.5mm; overflow:hidden; }
+    .line { margin-top:0.7mm; font-size:5.7pt; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  </style>
+</head>
+<body>
+  <div class="label">
+    <div class="qr"><img loading="eager" decoding="sync" crossorigin="anonymous" src="${qrUrl(url)}" /></div>
+    <div class="info">
+      <div class="brand">ACC BAU</div>
+      <div class="tag">PPE QR</div>
+      <div class="name">${ppe.type || ""} ${ppe.name || ""}</div>
+      <div class="line">${ppe.person || "—"}</div>
+      <div class="line">ID: ${ppe.id || "—"}</div>
+    </div>
+  </div>
+  <script>
+    window.onload = function () {
+      const imgs = Array.from(document.images || []);
+      Promise.all(imgs.map(function (img) {
+        if (img.complete) return Promise.resolve();
+        return new Promise(function (resolve) { img.onload = resolve; img.onerror = resolve; });
+      })).then(function () { setTimeout(function () { window.print(); }, 700); });
+    };
+  </script>
+</body>
+</html>`;
+    const w = window.open("", "_blank", "width=360,height=220");
+    if (!w) return alert("Nie udało się otworzyć okna drukowania. Sprawdź blokadę popupów.");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+
+
   async function loadHistoryFromDb({ force = false } = {}) {
     if (historyLoading) return;
     if (historyLoaded && !force) return;
@@ -2031,6 +2212,11 @@ export default function App() {
     w.document.close();
   }
 
+  if (publicPpeId) {
+    const ppe = (Array.isArray(settings.ppeRecords) ? settings.ppeRecords : []).find((p) => p.id === publicPpeId);
+    return <PublicPpeView ppe={ppe} T={T} lang={lang} setLang={setLang} onBack={() => setPublicPpeId("")} />;
+  }
+
   if (publicToolId) {
     const tool = tools.find((t) => t.id === publicToolId);
     return <PublicToolView tool={tool} T={T} lang={lang} setLang={setLang} onBack={() => setPublicToolId("")} />;
@@ -2042,9 +2228,13 @@ export default function App() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.18),transparent_34%),linear-gradient(135deg,#2f302d_0%,#474944_42%,#d7d2c8_100%)] text-zinc-950">
       {!dbLoaded && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 text-white"><div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl"><div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-yellow-400" /><div className="font-black">{T.loadingDb}</div></div></div>}
       {dbStatus === "error" && <div className="mx-auto max-w-7xl px-4 pt-4"><div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700">{T.supabaseOffline}</div></div>}
-      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={openHistoryModal} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
+      <Header T={T} lang={lang} setLang={setLang} user={user} role={role} isAdmin={isAdmin} activeModule={activeModule} onTools={() => setActiveModule("tools")} onPpe={() => setActiveModule("ppe")} onLogout={logout} onClaim={() => setShowClaim(true)} onHistory={openHistoryModal} onExcel={exportExcel} onSettings={() => setShowSettings(true)} onAdd={openNewTool} />
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+        {activeModule === "ppe" ? (
+          <PpePage T={T} isAdmin={isAdmin} settings={settings} records={ppeRecords} onSave={upsertPpeRecord} onDelete={deletePpeRecord} onPrintQr={printPpeLabel} />
+        ) : (
+          <>
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={<Wrench />} label={T.allTools} value={stats.all} />
           <StatCard icon={<PackageCheck />} label={T.available} value={stats.free} />
@@ -2112,6 +2302,8 @@ export default function App() {
             <InfoBox T={T} />
           </aside>
         </section>
+          </>
+        )}
       </main>
 
       {showToolForm && <ToolForm T={T} form={toolForm} setForm={setToolForm} settings={settings} onClose={() => setShowToolForm(false)} onSave={saveTool} editing={editing} />}
@@ -2159,7 +2351,7 @@ function LanguageSelect({ lang, setLang, dark = false }) {
   );
 }
 
-function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHistory, onExcel, onSettings, onAdd }) {
+function Header({ T, lang, setLang, user, role, isAdmin, activeModule, onTools, onPpe, onLogout, onClaim, onHistory, onExcel, onSettings, onAdd }) {
   return (
     <header className="border-b border-white/10 bg-zinc-950 text-white shadow-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -2180,6 +2372,14 @@ function Header({ T, lang, setLang, user, role, isAdmin, onLogout, onClaim, onHi
           <div className="rounded-xl border border-white/20 bg-emerald-500/20 px-3 py-2 text-sm font-bold">
             {user} • {role === "admin" ? T.admin : T.worker}
           </div>
+
+          <Button onClick={onTools} className={`rounded-xl ${activeModule === "tools" ? "bg-orange-600 text-white hover:bg-orange-500" : "bg-zinc-800 text-white hover:bg-zinc-700"}`}>
+            <Wrench className="mr-2 h-4 w-4" /> {T.toolsList}
+          </Button>
+
+          <Button onClick={onPpe} className={`rounded-xl ${activeModule === "ppe" ? "bg-orange-600 text-white hover:bg-orange-500" : "bg-zinc-800 text-white hover:bg-zinc-700"}`}>
+            <ShieldCheck className="mr-2 h-4 w-4" /> {T.ppe || "PPE"}
+          </Button>
 
           <Button onClick={onClaim} className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600">
             <ScanLine className="mr-2 h-4 w-4" /> {T.takeover}
@@ -3233,6 +3433,235 @@ function ModalFooter({ T, onClose, onSave, saving = false }) { return <div class
 function TextList({ title, value, setValue }) { return <label><span className="mb-2 block text-sm font-bold">{title}</span><textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-72 w-full rounded-xl border p-3 text-sm" /></label>; }
 function InfoBox({ T }) { return <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]"><CardContent className="p-4 sm:p-6"><div className="flex items-center gap-2 font-black"><ShieldCheck className="h-5 w-5" /> {T.ruleTitle}</div><ol className="mt-3 space-y-2 text-sm text-zinc-600"><li>1. {T.rule1}</li><li>2. {T.rule2}</li><li>3. {T.rule3}</li><li>4. {T.rule4}</li></ol></CardContent></Card>; }
 function SectionTitle({ icon, title }) { return <div className="mb-2 mt-6 flex items-center gap-2 font-black">{React.cloneElement(icon, { className: "h-4 w-4" })} {title}</div>; }
+
+
+function ppeDueStatus(item, T) {
+  if (item.status && item.status !== "OK") {
+    const danger = item.status === "Uszkodzone" || item.status === "Zgubione" || item.status === "Damaged" || item.status === "Lost";
+    return { danger, label: item.status, cls: danger ? "bg-red-100 text-red-700 border-red-200" : "bg-amber-100 text-amber-700 border-amber-200" };
+  }
+  const d = daysUntil(item.expiryDate);
+  if (!item.expiryDate) return { danger: false, label: T.ppeStatusOk || "OK", cls: "bg-green-100 text-green-700 border-green-200" };
+  if (d < 0) return { danger: true, label: T.ppeStatusExpired || "Po terminie", cls: "bg-red-100 text-red-700 border-red-200" };
+  if (d <= 30) return { danger: true, label: `${T.ppeStatusWarning || "Do kontroli"} • ${d} ${T.days || "dni"}`, cls: "bg-amber-100 text-amber-700 border-amber-200" };
+  return { danger: false, label: T.ppeStatusOk || "OK", cls: "bg-green-100 text-green-700 border-green-200" };
+}
+
+function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr }) {
+  const [person, setPerson] = useState(settings.people?.[0] || "");
+  const [query, setQuery] = useState("");
+  const [editing, setEditing] = useState(null);
+  const empty = {
+    id: "",
+    person: person || settings.people?.[0] || "",
+    type: "Kask",
+    name: "",
+    size: "",
+    serial: "",
+    issuedDate: today(),
+    expiryDate: "",
+    status: "OK",
+    notes: "",
+    photo: "",
+    history: [],
+  };
+
+  const people = Array.from(new Set([...(settings.people || []), ...records.map((r) => r.person).filter(Boolean)]));
+  const currentRecords = records.filter((r) => {
+    const txt = `${r.person} ${r.type} ${r.name} ${r.size} ${r.serial} ${r.notes}`.toLowerCase();
+    return (!person || r.person === person) && txt.includes(query.toLowerCase());
+  });
+
+  const ppeTypes = ["Kask", "Buty", "Szelki", "Kurtka", "Rękawice", "Okulary", "Ochronniki słuchu", "Maska", "Kamizelka", "Inne"];
+  const ppeStatuses = ["OK", T.ppeStatusWarning || "Do kontroli", T.ppeStatusDamaged || "Uszkodzone", T.ppeStatusLost || "Zgubione"];
+
+  const missingCount = people.reduce((sum, p) => {
+    const owned = records.filter((r) => r.person === p);
+    const required = ["Kask", "Buty", "Kamizelka"];
+    return sum + required.filter((req) => !owned.some((r) => r.type === req)).length;
+  }, 0);
+  const expiredCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) < 0).length;
+  const soonCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) >= 0 && daysUntil(r.expiryDate) <= 30).length;
+
+  return (
+    <section className="space-y-5">
+      <Card className="rounded-[32px] border border-white/30 bg-white/95 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-2xl font-black"><ShieldCheck className="h-6 w-6 text-orange-600" /> {T.ppe || "PPE / ŚOI"}</h2>
+              <p className="text-sm text-zinc-500">{T.ppeSubtitle || "Środki ochrony indywidualnej pracowników"}</p>
+            </div>
+            {isAdmin && (
+              <Button onClick={() => setEditing(empty)} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500">
+                <Plus className="mr-2 h-4 w-4" /> {T.addPpe || "Dodaj PPE"}
+              </Button>
+            )}
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <StatCard icon={<User />} label={T.ppeEmployees || "Pracownicy PPE"} value={people.length} />
+            <StatCard icon={<AlertTriangle />} label={T.ppeDashboardExpired || "PPE po terminie"} value={expiredCount} danger={expiredCount > 0} />
+            <StatCard icon={<ClipboardList />} label={T.ppeDashboardSoon || "PPE do kontroli"} value={soonCount} danger={soonCount > 0} />
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-[260px_1fr]">
+            <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+              <div className="mb-2 text-sm font-black">{T.ppeEmployees || "Pracownicy PPE"}</div>
+              <button onClick={() => setPerson("")} className={`mb-2 w-full rounded-2xl border px-3 py-2 text-left text-sm font-bold ${person === "" ? "border-zinc-950 bg-zinc-950 text-white" : "bg-white"}`}>
+                {T.ppeAllEmployees || "Wszyscy pracownicy"}
+              </button>
+              <div className="space-y-2">
+                {people.map((p) => {
+                  const count = records.filter((r) => r.person === p).length;
+                  return (
+                    <button key={p} onClick={() => setPerson(p)} className={`w-full rounded-2xl border px-3 py-2 text-left text-sm font-bold ${person === p ? "border-orange-500 bg-orange-50 text-orange-800" : "border-zinc-200 bg-white text-zinc-800"}`}>
+                      {p}<span className="float-right text-xs text-zinc-500">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2 shadow-inner">
+                <Search className="h-4 w-4 text-zinc-400" />
+                <input className="w-full bg-transparent text-sm outline-none" placeholder={T.search || "Szukaj..."} value={query} onChange={(e) => setQuery(e.target.value)} />
+              </div>
+
+              <div className="grid gap-3">
+                {!currentRecords.length && <div className="rounded-3xl border border-dashed bg-white/80 p-8 text-center text-sm font-bold text-zinc-500">{T.ppeNoItems || "Brak PPE dla tego pracownika."}</div>}
+                {currentRecords.map((item) => {
+                  const st = ppeDueStatus(item, T);
+                  return (
+                    <div key={item.id} className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-black">{item.type} • {item.name || "—"}</h3>
+                            <Badge cls={st.cls}>{st.label}</Badge>
+                          </div>
+                          <div className="mt-2 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
+                            <div><b>{T.ppeAssignedTo || "Przypisane do"}:</b> {item.person || "—"}</div>
+                            <div><b>{T.ppeSize || "Rozmiar"}:</b> {item.size || "—"}</div>
+                            <div><b>{T.serial || "Serial"}:</b> {item.serial || "—"}</div>
+                            <div><b>{T.ppeIssuedDate || "Data wydania"}:</b> {item.issuedDate || "—"}</div>
+                            <div><b>{T.ppeExpiryDate || "Data ważności"}:</b> {item.expiryDate || "—"}</div>
+                          </div>
+                          {item.notes && <p className="mt-2 rounded-2xl bg-zinc-50 p-3 text-sm text-zinc-700">{item.notes}</p>}
+                          <p className="mt-2 text-xs text-zinc-400">{T.ppeQrHint || "Mały QR dla PPE."}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                          <Button variant="outline" onClick={() => onPrintQr(item)} className="rounded-xl"><Printer className="mr-2 h-4 w-4" /> {T.printPpeQr || "Drukuj mały QR"}</Button>
+                          {isAdmin && <Button variant="outline" onClick={() => setEditing(item)} className="rounded-xl"><Edit3 className="mr-2 h-4 w-4" /> {T.edit}</Button>}
+                          {isAdmin && <Button variant="outline" onClick={() => onDelete(item.id)} className="rounded-xl text-red-600"><Trash2 className="mr-2 h-4 w-4" /> {T.delete}</Button>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {editing && (
+        <PpeFormModal
+          T={T}
+          form={editing}
+          setForm={setEditing}
+          people={people}
+          types={ppeTypes}
+          statuses={ppeStatuses}
+          onClose={() => setEditing(null)}
+          onSave={() => { onSave(editing); setEditing(null); }}
+        />
+      )}
+    </section>
+  );
+}
+
+function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSave }) {
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  return (
+    <Modal onClose={onClose}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xl font-black">{form.id ? (T.editPpe || "Edytuj PPE") : (T.addPpe || "Dodaj PPE")}</h3>
+        <Button onClick={onClose} variant="outline" className="rounded-xl"><X className="h-4 w-4" /></Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormSelect label={T.person || "Osoba"} value={form.person || ""} options={people} onChange={(v) => set("person", v)} />
+        <FormSelect label={T.ppeType || "Rodzaj PPE"} value={form.type || ""} options={types} onChange={(v) => set("type", v)} />
+        <Field label={T.ppeItem || "Nazwa / model"} value={form.name || ""} onChange={(v) => set("name", v)} />
+        <Field label={T.ppeSize || "Rozmiar"} value={form.size || ""} onChange={(v) => set("size", v)} />
+        <Field label={T.serial || "Numer seryjny"} value={form.serial || ""} onChange={(v) => set("serial", v)} />
+        <FormSelect label={T.status || "Status"} value={form.status || "OK"} options={statuses} onChange={(v) => set("status", v)} />
+        <Field label={T.ppeIssuedDate || "Data wydania"} value={form.issuedDate || ""} type="date" onChange={(v) => set("issuedDate", v)} />
+        <Field label={T.ppeExpiryDate || "Data ważności / przeglądu"} value={form.expiryDate || ""} type="date" onChange={(v) => set("expiryDate", v)} />
+      </div>
+
+      <label className="mt-3 block">
+        <span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes || "Uwagi"}</span>
+        <textarea value={form.notes || ""} onChange={(e) => set("notes", e.target.value)} className="min-h-[90px] w-full rounded-xl border px-3 py-2" />
+      </label>
+
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="outline" onClick={onClose} className="rounded-xl">{T.cancel}</Button>
+        <Button onClick={onSave} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500"><Save className="mr-2 h-4 w-4" /> {T.save}</Button>
+      </div>
+    </Modal>
+  );
+}
+
+function PublicPpeView({ ppe, T, lang, setLang, onBack }) {
+  if (!ppe) {
+    return (
+      <div className="min-h-screen bg-zinc-100 p-4">
+        <div className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-xl">
+          <LanguageSelect lang={lang} setLang={setLang} />
+          <h1 className="mt-4 text-2xl font-black">{T.noToolFound || "Nie znaleziono."}</h1>
+          <Button onClick={onBack} className="mt-4 rounded-xl">{T.back}</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const st = ppeDueStatus(ppe, T);
+
+  return (
+    <div className="min-h-screen bg-[linear-gradient(135deg,#2f302d,#d7d2c8)] p-4">
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+        <div className="bg-zinc-950 p-5 text-white">
+          <div className="flex items-center justify-between gap-3">
+            <LogoMark small />
+            <LanguageSelect lang={lang} setLang={setLang} dark />
+          </div>
+          <h1 className="mt-4 text-2xl font-black">{T.ppePublicTitle || "ACC BAU • PPE INFORMATION"}</h1>
+          <p className="text-sm text-zinc-300">{T.ppePublicSubtitle || "Informacje po zeskanowaniu QR — bez logowania."}</p>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <Info label={T.ppeType || "Rodzaj PPE"} value={ppe.type || "—"} />
+          <Info label={T.ppeItem || "Nazwa / model"} value={ppe.name || "—"} />
+          <Info label={T.ppeAssignedTo || "Przypisane do"} value={ppe.person || "—"} />
+          <Info label={T.ppeSize || "Rozmiar"} value={ppe.size || "—"} />
+          <Info label={T.serial || "Numer seryjny"} value={ppe.serial || "—"} />
+          <Info label={T.ppeIssuedDate || "Data wydania"} value={ppe.issuedDate || "—"} />
+          <Info label={T.ppeExpiryDate || "Data ważności / przeglądu"} value={ppe.expiryDate || "—"} />
+          <div className={`rounded-2xl border p-3 ${st.cls}`}>
+            <p className="text-xs font-bold">{T.status || "Status"}</p>
+            <p className="font-black">{st.label}</p>
+          </div>
+          <div className="sm:col-span-2">
+            <Info label={T.notes || "Uwagi"} value={ppe.notes || "—"} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ icon, label, value, danger }) { return <Card className="rounded-[28px] border border-white/30 bg-white/95 shadow-xl"><CardContent className="flex items-center gap-4 p-5"><div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${danger ? "bg-red-100 text-red-700" : "bg-zinc-100 text-zinc-900"}`}>{React.cloneElement(icon, { className: "h-6 w-6" })}</div><div><p className="text-sm text-zinc-500">{label}</p><p className="text-2xl font-black">{value}</p></div></CardContent></Card>; }
 function Select({ label, value, setValue, options }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><select value={value} onChange={(e) => setValue(e.target.value)} className="w-full rounded-xl border bg-white px-3 py-2 text-sm">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
 function FormSelect({ label, value, options, onChange }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
