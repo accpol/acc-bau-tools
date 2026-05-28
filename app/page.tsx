@@ -281,6 +281,27 @@ const I18N = {
     ppeAllEmployees: "Wszyscy pracownicy",
     ppeHistoryNote: "Historia PPE jest zapisywana razem z ustawieniami i nie kasuje narzędzi ani zdjęć.",
     ppeSaveError: "Nie udało się zapisać PPE:",
+    ppeEmployeeCard: "Karta pracownika PPE",
+    printEmployeePpe: "Drukuj kartę pracownika",
+    ppeIssuedItems: "Wydane środki ochrony",
+    ppeRequiredSet: "Wymagany zestaw",
+    ppeMissingItems: "Brakuje",
+    ppeCompleteSet: "Komplet PPE",
+    ppeSignature: "Podpis pracownika",
+    ppeTypeHelmet: "Kask",
+    ppeTypeShoes: "Buty ochronne",
+    ppeTypeHarness: "Szelki bezpieczeństwa",
+    ppeTypeJacket: "Kurtka",
+    ppeTypeGloves: "Rękawice",
+    ppeTypeGlasses: "Okulary ochronne",
+    ppeTypeHearing: "Ochronniki słuchu",
+    ppeTypeMask: "Maska",
+    ppeTypeVest: "Kamizelka",
+    ppeTypeOther: "Inne",
+    ppeSizes: "Rozmiary pracownika",
+    ppeEmployeeSummary: "Podsumowanie PPE pracownika",
+    ppeFormHint: "Wypełnij dane wydanego środka ochrony. Istniejące PPE i historia nie są usuwane.",
+    ppeSuggested: "Podpowiedź: dla nowych pracowników sprawdź kask, buty, kamizelkę, rękawice i okulary.",
   },
   en: {
     appTitle: "ACC Bau Tool Control",
@@ -523,6 +544,27 @@ const I18N = {
     ppeAllEmployees: "All employees",
     ppeHistoryNote: "PPE history is saved in settings and does not delete tools or photos.",
     ppeSaveError: "Could not save PPE:",
+    ppeEmployeeCard: "Employee PPE card",
+    printEmployeePpe: "Print employee card",
+    ppeIssuedItems: "Issued PPE items",
+    ppeRequiredSet: "Required set",
+    ppeMissingItems: "Missing",
+    ppeCompleteSet: "Complete PPE",
+    ppeSignature: "Employee signature",
+    ppeTypeHelmet: "Helmet",
+    ppeTypeShoes: "Safety shoes",
+    ppeTypeHarness: "Safety harness",
+    ppeTypeJacket: "Jacket",
+    ppeTypeGloves: "Gloves",
+    ppeTypeGlasses: "Safety glasses",
+    ppeTypeHearing: "Hearing protection",
+    ppeTypeMask: "Mask",
+    ppeTypeVest: "Safety vest",
+    ppeTypeOther: "Other",
+    ppeSizes: "Employee sizes",
+    ppeEmployeeSummary: "Employee PPE summary",
+    ppeFormHint: "Fill in issued PPE details. Existing PPE and history are not deleted.",
+    ppeSuggested: "Tip: for new workers check helmet, shoes, vest, gloves and glasses.",
   },
   de: {
     appTitle: "ACC Bau Werkzeugverwaltung",
@@ -765,6 +807,27 @@ const I18N = {
     ppeAllEmployees: "Alle Mitarbeiter",
     ppeHistoryNote: "PSA-Historie wird in den Einstellungen gespeichert und löscht keine Werkzeuge oder Fotos.",
     ppeSaveError: "PSA konnte nicht gespeichert werden:",
+    ppeEmployeeCard: "PSA-Mitarbeiterkarte",
+    printEmployeePpe: "Mitarbeiterkarte drucken",
+    ppeIssuedItems: "Ausgegebene PSA",
+    ppeRequiredSet: "Erforderlicher Satz",
+    ppeMissingItems: "Fehlt",
+    ppeCompleteSet: "PSA komplett",
+    ppeSignature: "Unterschrift Mitarbeiter",
+    ppeTypeHelmet: "Helm",
+    ppeTypeShoes: "Sicherheitsschuhe",
+    ppeTypeHarness: "Auffanggurt",
+    ppeTypeJacket: "Jacke",
+    ppeTypeGloves: "Handschuhe",
+    ppeTypeGlasses: "Schutzbrille",
+    ppeTypeHearing: "Gehörschutz",
+    ppeTypeMask: "Maske",
+    ppeTypeVest: "Warnweste",
+    ppeTypeOther: "Sonstige",
+    ppeSizes: "Mitarbeitergrößen",
+    ppeEmployeeSummary: "PSA-Übersicht Mitarbeiter",
+    ppeFormHint: "Füllen Sie die Daten der ausgegebenen PSA aus. Bestehende PSA und Historie werden nicht gelöscht.",
+    ppeSuggested: "Hinweis: Bei neuen Mitarbeitern Helm, Schuhe, Weste, Handschuhe und Brille prüfen.",
   },
 };
 
@@ -1832,7 +1895,7 @@ export default function App() {
     <div class="info">
       <div class="brand">ACC BAU</div>
       <div class="tag">PPE QR</div>
-      <div class="name">${ppe.type || ""} ${ppe.name || ""}</div>
+      <div class="name">${ppeTypeLabel(ppe.type, T)} ${ppe.name || ""}</div>
       <div class="line">${ppe.person || "—"}</div>
       <div class="line">ID: ${ppe.id || "—"}</div>
     </div>
@@ -1856,6 +1919,96 @@ export default function App() {
   }
 
 
+
+
+
+  function printPpeEmployeeCard(personName) {
+    const employee = personName || (settings.people?.[0] || "");
+    const items = ppeRecords.filter((p) => !employee || p.person === employee);
+    const required = ppeRequiredCanonicalTypes();
+    const missing = required.filter((req) => !items.some((r) => ppeCanonicalType(r.type) === req));
+    const generated = new Date().toLocaleString("pl-PL");
+
+    const rows = items.map((p) => {
+      const st = ppeDueStatus(p, T);
+      return `<tr>
+        <td>${ppeTypeLabel(p.type, T)}</td>
+        <td><b>${p.name || "—"}</b><br/><small>${p.serial || ""}</small></td>
+        <td>${p.size || "—"}</td>
+        <td>${p.issuedDate || "—"}</td>
+        <td>${p.expiryDate || "—"}</td>
+        <td>${st.label}</td>
+        <td>${p.notes || ""}</td>
+      </tr>`;
+    }).join("");
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>${T.ppeEmployeeCard || "Karta pracownika PPE"}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color:#111; margin:0; }
+    .top { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; border-bottom:3px solid #111; padding-bottom:10px; margin-bottom:14px; }
+    .brand { font-size:22pt; font-weight:900; letter-spacing:0.5pt; }
+    .tag { display:inline-block; margin-top:6px; border:2px solid #111; border-radius:8px; padding:4px 10px; font-size:10pt; font-weight:900; }
+    h1 { margin:14px 0 6px 0; font-size:20pt; }
+    .meta { color:#555; font-size:10pt; }
+    .box { border:1px solid #ddd; border-radius:14px; padding:12px; margin:12px 0; }
+    .ok { border-color:#bbf7d0; background:#f0fdf4; color:#166534; font-weight:900; }
+    .warn { border-color:#fde68a; background:#fffbeb; color:#92400e; font-weight:900; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:9.5pt; }
+    th { background:#111; color:white; text-align:left; padding:7px; border:1px solid #111; }
+    td { padding:7px; border:1px solid #ccc; vertical-align:top; }
+    .signature { margin-top:28px; display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+    .sigline { border-top:1px solid #111; padding-top:6px; font-size:9pt; color:#555; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="brand">ACC BAU</div>
+      <div class="tag">PPE / HSE</div>
+    </div>
+    <div class="meta">${T.printGenerated || "Wydruk"}: ${generated}</div>
+  </div>
+  <h1>${T.ppeEmployeeCard || "Karta pracownika PPE"}</h1>
+  <div class="box">
+    <b>${T.person || "Osoba"}:</b> ${employee || "—"}<br/>
+    <b>${T.ppeIssuedItems || "Wydane środki ochrony"}:</b> ${items.length}
+  </div>
+  <div class="box ${missing.length ? "warn" : "ok"}">
+    ${missing.length ? `${T.ppeMissingItems || "Brakuje"}: ${missing.map((x) => ppeTypeLabel(x, T)).join(", ")}` : (T.ppeCompleteSet || "Komplet PPE")}
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>${T.ppeType || "Rodzaj PPE"}</th>
+        <th>${T.ppeItem || "Nazwa / model"}</th>
+        <th>${T.ppeSize || "Rozmiar"}</th>
+        <th>${T.ppeIssuedDate || "Data wydania"}</th>
+        <th>${T.ppeExpiryDate || "Data ważności / przeglądu"}</th>
+        <th>${T.status || "Status"}</th>
+        <th>${T.notes || "Uwagi"}</th>
+      </tr>
+    </thead>
+    <tbody>${rows || `<tr><td colspan="7">${T.ppeNoItems || "Brak PPE dla tego pracownika."}</td></tr>`}</tbody>
+  </table>
+  <div class="signature">
+    <div class="sigline">${T.ppeSignature || "Podpis pracownika"}</div>
+    <div class="sigline">${T.date || "Data"}</div>
+  </div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>
+</body>
+</html>`;
+
+    const w = window.open("", "_blank", "width=900,height=900");
+    if (!w) return alert("Nie udało się otworzyć okna wydruku. Sprawdź blokadę popupów.");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
 
   async function loadHistoryFromDb({ force = false } = {}) {
     if (historyLoading) return;
@@ -2232,7 +2385,7 @@ export default function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         {activeModule === "ppe" ? (
-          <PpePage T={T} isAdmin={isAdmin} settings={settings} records={ppeRecords} onSave={upsertPpeRecord} onDelete={deletePpeRecord} onPrintQr={printPpeLabel} />
+          <PpePage T={T} isAdmin={isAdmin} settings={settings} records={ppeRecords} onSave={upsertPpeRecord} onDelete={deletePpeRecord} onPrintQr={printPpeLabel} onPrintEmployeeCard={printPpeEmployeeCard} />
         ) : (
           <>
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -3435,6 +3588,58 @@ function InfoBox({ T }) { return <Card className="rounded-[32px] border border-w
 function SectionTitle({ icon, title }) { return <div className="mb-2 mt-6 flex items-center gap-2 font-black">{React.cloneElement(icon, { className: "h-4 w-4" })} {title}</div>; }
 
 
+
+function ppeCanonicalType(value) {
+  const v = String(value || "").toLowerCase();
+  if (["kask", "helmet", "helm"].some((x) => v.includes(x))) return "helmet";
+  if (["buty", "shoes", "schuhe", "sicherheitsschuhe"].some((x) => v.includes(x))) return "shoes";
+  if (["szelki", "harness", "auffanggurt"].some((x) => v.includes(x))) return "harness";
+  if (["kurtka", "jacket", "jacke"].some((x) => v.includes(x))) return "jacket";
+  if (["rękawice", "rekawice", "gloves", "handschuhe"].some((x) => v.includes(x))) return "gloves";
+  if (["okulary", "glasses", "brille"].some((x) => v.includes(x))) return "glasses";
+  if (["słuchu", "sluchu", "hearing", "gehör", "gehor"].some((x) => v.includes(x))) return "hearing";
+  if (["maska", "mask", "maske"].some((x) => v.includes(x))) return "mask";
+  if (["kamizelka", "vest", "weste"].some((x) => v.includes(x))) return "vest";
+  return "other";
+}
+
+function ppeTypeLabel(value, T) {
+  const key = ppeCanonicalType(value);
+  const map = {
+    helmet: T.ppeTypeHelmet || "Kask",
+    shoes: T.ppeTypeShoes || "Buty ochronne",
+    harness: T.ppeTypeHarness || "Szelki bezpieczeństwa",
+    jacket: T.ppeTypeJacket || "Kurtka",
+    gloves: T.ppeTypeGloves || "Rękawice",
+    glasses: T.ppeTypeGlasses || "Okulary ochronne",
+    hearing: T.ppeTypeHearing || "Ochronniki słuchu",
+    mask: T.ppeTypeMask || "Maska",
+    vest: T.ppeTypeVest || "Kamizelka",
+    other: T.ppeTypeOther || "Inne",
+  };
+  return map[key] || value || "—";
+}
+
+function ppeBaseTypes(T) {
+  return [
+    T.ppeTypeHelmet || "Kask",
+    T.ppeTypeShoes || "Buty ochronne",
+    T.ppeTypeHarness || "Szelki bezpieczeństwa",
+    T.ppeTypeJacket || "Kurtka",
+    T.ppeTypeGloves || "Rękawice",
+    T.ppeTypeGlasses || "Okulary ochronne",
+    T.ppeTypeHearing || "Ochronniki słuchu",
+    T.ppeTypeMask || "Maska",
+    T.ppeTypeVest || "Kamizelka",
+    T.ppeTypeOther || "Inne",
+  ];
+}
+
+function ppeRequiredCanonicalTypes() {
+  return ["helmet", "shoes", "vest", "gloves", "glasses"];
+}
+
+
 function ppeDueStatus(item, T) {
   if (item.status && item.status !== "OK") {
     const danger = item.status === "Uszkodzone" || item.status === "Zgubione" || item.status === "Damaged" || item.status === "Lost";
@@ -3447,7 +3652,7 @@ function ppeDueStatus(item, T) {
   return { danger: false, label: T.ppeStatusOk || "OK", cls: "bg-green-100 text-green-700 border-green-200" };
 }
 
-function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr }) {
+function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, onPrintEmployeeCard }) {
   const [person, setPerson] = useState(settings.people?.[0] || "");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(null);
@@ -3472,14 +3677,17 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr })
     return (!person || r.person === person) && txt.includes(query.toLowerCase());
   });
 
-  const ppeTypes = ["Kask", "Buty", "Szelki", "Kurtka", "Rękawice", "Okulary", "Ochronniki słuchu", "Maska", "Kamizelka", "Inne"];
+  const ppeTypes = ppeBaseTypes(T);
   const ppeStatuses = ["OK", T.ppeStatusWarning || "Do kontroli", T.ppeStatusDamaged || "Uszkodzone", T.ppeStatusLost || "Zgubione"];
 
   const missingCount = people.reduce((sum, p) => {
     const owned = records.filter((r) => r.person === p);
-    const required = ["Kask", "Buty", "Kamizelka"];
-    return sum + required.filter((req) => !owned.some((r) => r.type === req)).length;
+    const required = ppeRequiredCanonicalTypes();
+    return sum + required.filter((req) => !owned.some((r) => ppeCanonicalType(r.type) === req)).length;
   }, 0);
+
+  const selectedOwned = records.filter((r) => !person || r.person === person);
+  const selectedMissing = ppeRequiredCanonicalTypes().filter((req) => !selectedOwned.some((r) => ppeCanonicalType(r.type) === req));
   const expiredCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) < 0).length;
   const soonCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) >= 0 && daysUntil(r.expiryDate) <= 30).length;
 
@@ -3492,17 +3700,36 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr })
               <h2 className="flex items-center gap-2 text-2xl font-black"><ShieldCheck className="h-6 w-6 text-orange-600" /> {T.ppe || "PPE / ŚOI"}</h2>
               <p className="text-sm text-zinc-500">{T.ppeSubtitle || "Środki ochrony indywidualnej pracowników"}</p>
             </div>
-            {isAdmin && (
-              <Button onClick={() => setEditing(empty)} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500">
-                <Plus className="mr-2 h-4 w-4" /> {T.addPpe || "Dodaj PPE"}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => onPrintEmployeeCard(person || (people[0] || ""))} className="rounded-xl bg-white">
+                <Printer className="mr-2 h-4 w-4" /> {T.printEmployeePpe || "Drukuj kartę pracownika"}
               </Button>
-            )}
+              {isAdmin && (
+                <Button onClick={() => setEditing(empty)} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500">
+                  <Plus className="mr-2 h-4 w-4" /> {T.addPpe || "Dodaj PPE"}
+                </Button>
+              )}
+            </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={<User />} label={T.ppeEmployees || "Pracownicy PPE"} value={people.length} />
             <StatCard icon={<AlertTriangle />} label={T.ppeDashboardExpired || "PPE po terminie"} value={expiredCount} danger={expiredCount > 0} />
             <StatCard icon={<ClipboardList />} label={T.ppeDashboardSoon || "PPE do kontroli"} value={soonCount} danger={soonCount > 0} />
+            <StatCard icon={<PackageX />} label={T.ppeDashboardMissing || "Braki PPE"} value={missingCount} danger={missingCount > 0} />
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-black">{T.ppeEmployeeSummary || "Podsumowanie PPE pracownika"}</div>
+                <div className="mt-1 text-xs text-zinc-500">{person || T.ppeAllEmployees || "Wszyscy pracownicy"}</div>
+              </div>
+              <div className={`rounded-2xl border px-3 py-2 text-sm font-black ${selectedMissing.length ? "border-amber-200 bg-amber-50 text-amber-800" : "border-green-200 bg-green-50 text-green-800"}`}>
+                {selectedMissing.length ? `${T.ppeMissingItems || "Brakuje"}: ${selectedMissing.map((x) => ppeTypeLabel(x, T)).join(", ")}` : (T.ppeCompleteSet || "Komplet PPE")}
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-zinc-500">{T.ppeSuggested || "Podpowiedź: dla nowych pracowników sprawdź kask, buty, kamizelkę, rękawice i okulary."}</div>
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[260px_1fr]">
@@ -3538,7 +3765,7 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr })
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-lg font-black">{item.type} • {item.name || "—"}</h3>
+                            <h3 className="text-lg font-black">{ppeTypeLabel(item.type, T)} • {item.name || "—"}</h3>
                             <Badge cls={st.cls}>{st.label}</Badge>
                           </div>
                           <div className="mt-2 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
@@ -3585,13 +3812,15 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr })
 function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSave }) {
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   return (
-    <Modal onClose={onClose}>
-      <div className="mb-4 flex items-center justify-between">
+    <Modal onClose={onClose} wide>
+      <div className="mb-4 flex items-center justify-between border-b px-1 pb-4">
         <h3 className="text-xl font-black">{form.id ? (T.editPpe || "Edytuj PPE") : (T.addPpe || "Dodaj PPE")}</h3>
         <Button onClick={onClose} variant="outline" className="rounded-xl"><X className="h-4 w-4" /></Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <p className="mb-4 rounded-2xl bg-orange-50 p-3 text-sm font-bold text-orange-800">{T.ppeFormHint || "Wypełnij dane wydanego środka ochrony. Istniejące PPE i historia nie są usuwane."}</p>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <FormSelect label={T.person || "Osoba"} value={form.person || ""} options={people} onChange={(v) => set("person", v)} />
         <FormSelect label={T.ppeType || "Rodzaj PPE"} value={form.type || ""} options={types} onChange={(v) => set("type", v)} />
         <Field label={T.ppeItem || "Nazwa / model"} value={form.name || ""} onChange={(v) => set("name", v)} />
@@ -3604,7 +3833,7 @@ function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSa
 
       <label className="mt-3 block">
         <span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes || "Uwagi"}</span>
-        <textarea value={form.notes || ""} onChange={(e) => set("notes", e.target.value)} className="min-h-[90px] w-full rounded-xl border px-3 py-2" />
+        <textarea value={form.notes || ""} onChange={(e) => set("notes", e.target.value)} className="min-h-[140px] w-full rounded-xl border px-3 py-2" />
       </label>
 
       <div className="mt-5 flex justify-end gap-2">
@@ -3642,7 +3871,7 @@ function PublicPpeView({ ppe, T, lang, setLang, onBack }) {
           <p className="text-sm text-zinc-300">{T.ppePublicSubtitle || "Informacje po zeskanowaniu QR — bez logowania."}</p>
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Info label={T.ppeType || "Rodzaj PPE"} value={ppe.type || "—"} />
+          <Info label={T.ppeType || "Rodzaj PPE"} value={ppeTypeLabel(ppe.type, T)} />
           <Info label={T.ppeItem || "Nazwa / model"} value={ppe.name || "—"} />
           <Info label={T.ppeAssignedTo || "Przypisane do"} value={ppe.person || "—"} />
           <Info label={T.ppeSize || "Rozmiar"} value={ppe.size || "—"} />
