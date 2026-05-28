@@ -1922,8 +1922,6 @@ export default function App() {
   function printPpeEmployeeCard(personName) {
     const employee = personName || (settings.people?.[0] || "");
     const items = ppeRecords.filter((p) => !employee || p.person === employee);
-    const required = ppeRequiredCanonicalTypes();
-    const missing = required.filter((req) => !items.some((r) => ppeCanonicalType(r.type) === req));
     const generated = new Date().toLocaleString("pl-PL");
 
     const rows = items.map((p) => {
@@ -1974,9 +1972,6 @@ export default function App() {
   <div class="box">
     <b>${T.person || "Osoba"}:</b> ${employee || "—"}<br/>
     <b>${T.ppeIssuedItems || "Wydane środki ochrony"}:</b> ${items.length}
-  </div>
-  <div class="box ${missing.length ? "warn" : "ok"}">
-    ${missing.length ? `${T.ppeMissingItems || "Brakuje"}: ${missing.map((x) => ppeTypeLabel(x, T)).join(", ")}` : (T.ppeCompleteSet || "Komplet PPE")}
   </div>
   <table>
     <thead>
@@ -3652,6 +3647,7 @@ function ppeDueStatus(item, T) {
 function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, onPrintEmployeeCard }) {
   const [person, setPerson] = useState(settings.people?.[0] || "");
   const [query, setQuery] = useState("");
+  const [ppeFilter, setPpeFilter] = useState("");
   const [editing, setEditing] = useState(null);
   const empty = {
     id: "",
@@ -3671,20 +3667,20 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
   const people = Array.from(new Set([...(settings.people || []), ...records.map((r) => r.person).filter(Boolean)]));
   const currentRecords = records.filter((r) => {
     const txt = `${r.person} ${r.type} ${r.name} ${r.size} ${r.serial} ${r.notes}`.toLowerCase();
-    return (!person || r.person === person) && txt.includes(query.toLowerCase());
+    const due = daysUntil(r.expiryDate);
+    const filterMatch =
+      !ppeFilter ||
+      (ppeFilter === "expired" && r.expiryDate && due < 0) ||
+      (ppeFilter === "soon" && r.expiryDate && due >= 0 && due <= 30);
+    return filterMatch && (!person || r.person === person) && txt.includes(query.toLowerCase());
   });
+
+  function togglePpeFilter(key) {
+    setPpeFilter((current) => current === key ? "" : key);
+  }
 
   const ppeTypes = ppeBaseTypes(T);
   const ppeStatuses = ["OK", T.ppeStatusWarning || "Do kontroli", T.ppeStatusDamaged || "Uszkodzone", T.ppeStatusLost || "Zgubione"];
-
-  const missingCount = people.reduce((sum, p) => {
-    const owned = records.filter((r) => r.person === p);
-    const required = ppeRequiredCanonicalTypes();
-    return sum + required.filter((req) => !owned.some((r) => ppeCanonicalType(r.type) === req)).length;
-  }, 0);
-
-  const selectedOwned = records.filter((r) => !person || r.person === person);
-  const selectedMissing = ppeRequiredCanonicalTypes().filter((req) => !selectedOwned.some((r) => ppeCanonicalType(r.type) === req));
   const expiredCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) < 0).length;
   const soonCount = records.filter((r) => r.expiryDate && daysUntil(r.expiryDate) >= 0 && daysUntil(r.expiryDate) <= 30).length;
 
@@ -3709,24 +3705,16 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={<User />} label={T.ppeEmployees || "Pracownicy PPE"} value={people.length} />
-            <StatCard icon={<AlertTriangle />} label={T.ppeDashboardExpired || "PPE po terminie"} value={expiredCount} danger={expiredCount > 0} />
-            <StatCard icon={<ClipboardList />} label={T.ppeDashboardSoon || "PPE do kontroli"} value={soonCount} danger={soonCount > 0} />
-            <StatCard icon={<PackageX />} label={T.ppeDashboardMissing || "Braki PPE"} value={missingCount} danger={missingCount > 0} />
-          </div>
-
-          <div className="mt-4 rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-black">{T.ppeEmployeeSummary || "Podsumowanie PPE pracownika"}</div>
-                <div className="mt-1 text-xs text-zinc-500">{person || T.ppeAllEmployees || "Wszyscy pracownicy"}</div>
-              </div>
-              <div className={`rounded-2xl border px-3 py-2 text-sm font-black ${selectedMissing.length ? "border-amber-200 bg-amber-50 text-amber-800" : "border-green-200 bg-green-50 text-green-800"}`}>
-                {selectedMissing.length ? `${T.ppeMissingItems || "Brakuje"}: ${selectedMissing.map((x) => ppeTypeLabel(x, T)).join(", ")}` : (T.ppeCompleteSet || "Komplet PPE")}
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-zinc-500">{T.ppeSuggested || "Podpowiedź: dla nowych pracowników sprawdź kask, buty, kamizelkę, rękawice i okulary."}</div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <button type="button" onClick={() => { setPpeFilter(""); }} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "" ? "rounded-[28px] ring-2 ring-zinc-900 ring-offset-2" : ""}`}>
+              <StatCard icon={<User />} label={T.ppeEmployees || "Pracownicy PPE"} value={people.length} />
+            </button>
+            <button type="button" onClick={() => togglePpeFilter("expired")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "expired" ? "rounded-[28px] ring-2 ring-red-600 ring-offset-2" : ""}`}>
+              <StatCard icon={<AlertTriangle />} label={T.ppeDashboardExpired || "PPE po terminie"} value={expiredCount} danger={expiredCount > 0} />
+            </button>
+            <button type="button" onClick={() => togglePpeFilter("soon")} className={`text-left transition hover:-translate-y-0.5 ${ppeFilter === "soon" ? "rounded-[28px] ring-2 ring-amber-500 ring-offset-2" : ""}`}>
+              <StatCard icon={<ClipboardList />} label={T.ppeDashboardSoon || "PPE do kontroli"} value={soonCount} danger={soonCount > 0} />
+            </button>
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[260px_1fr]">
@@ -3752,6 +3740,12 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
                 <Search className="h-4 w-4 text-zinc-400" />
                 <input className="w-full bg-transparent text-sm outline-none" placeholder={T.search || "Szukaj..."} value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
+              {ppeFilter && (
+                <div className="mb-3 flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-black text-orange-800">
+                  <span>{T.active || "Aktywny"}: {ppeFilter === "expired" ? (T.ppeDashboardExpired || "PPE po terminie") : (T.ppeDashboardSoon || "PPE do kontroli")}</span>
+                  <button type="button" onClick={() => setPpeFilter("")} className="rounded-xl bg-white px-2 py-1 text-orange-700 shadow-sm">{T.cancel || "Anuluj"}</button>
+                </div>
+              )}
 
               <div className="grid gap-3">
                 {!currentRecords.length && <div className="rounded-3xl border border-dashed bg-white/80 p-8 text-center text-sm font-bold text-zinc-500">{T.ppeNoItems || "Brak PPE dla tego pracownika."}</div>}
