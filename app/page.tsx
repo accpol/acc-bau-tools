@@ -303,6 +303,19 @@ const I18N = {
     ppeTypeMask: "Maska",
     ppeTypeVest: "Kamizelka",
     ppeTypeOther: "Inne",
+    ppeTypeHelmetChin: "Kask ochronny z paskiem podbródkowym",
+    ppeTypeGlassesKN: "Okulary ochronne odporne na zarysowania i zaparowanie (KN)",
+    ppeTypeHiVis: "Odzież ostrzegawcza o wysokiej widzialności klasa 2/3",
+    ppeTypeBootsS3S7: "Buty ochronne za kostkę S3/S7",
+    ppeTypeHearingReady: "Ochronniki słuchu gotowe do użycia",
+    ppeTypeGlovesCutDE: "Rękawice antyprzecięciowe poziom D/E",
+    ppeTypeKneeProtection: "Ochrona kolan / zintegrowane nakolanniki",
+    ppeTypeChemicalGloves: "Rękawice chemoodporne z długim mankietem",
+    ppeTypeMaskFFP: "Maska przeciwpyłowa FFP2/FFP3",
+    ppeTypeFaceShield: "Przyłbica noszona na okularach ochronnych",
+    ppeTypeRubberBoots: "Wodoodporne gumowe buty ochronne",
+    ppeTypeHarnessFull: "Pełne szelki bezpieczeństwa przeciwupadkowe",
+    ppeTypeOtherCustom: "Inne — wpisz ręcznie",
     ppeSizes: "Rozmiary pracownika",
     ppeEmployeeSummary: "Podsumowanie PPE pracownika",
     ppeFormHint: "Wypełnij dane wydanego środka ochrony. Istniejące PPE i historia nie są usuwane.",
@@ -571,6 +584,19 @@ const I18N = {
     ppeTypeMask: "Mask",
     ppeTypeVest: "Safety vest",
     ppeTypeOther: "Other",
+    ppeTypeHelmetChin: "Safety helmet with chin strap",
+    ppeTypeGlassesKN: "Safety glasses, scratch-resistant & anti-fog KN",
+    ppeTypeHiVis: "High-visibility clothing Class 2/3",
+    ppeTypeBootsS3S7: "Ankle-high safety boots S3/S7",
+    ppeTypeHearingReady: "Hearing protection ready for use",
+    ppeTypeGlovesCutDE: "Cut-resistant gloves Level D/E",
+    ppeTypeKneeProtection: "Knee protection / integrated knee pads",
+    ppeTypeChemicalGloves: "Chemical protective long-cuff gloves",
+    ppeTypeMaskFFP: "Respiratory mask FFP2/FFP3",
+    ppeTypeFaceShield: "Face shield worn over safety glasses",
+    ppeTypeRubberBoots: "Waterproof rubber safety boots",
+    ppeTypeHarnessFull: "Full body fall arrest harness",
+    ppeTypeOtherCustom: "Other — type manually",
     ppeSizes: "Employee sizes",
     ppeEmployeeSummary: "Employee PPE summary",
     ppeFormHint: "Fill in issued PPE details. Existing PPE and history are not deleted.",
@@ -839,6 +865,19 @@ const I18N = {
     ppeTypeMask: "Maske",
     ppeTypeVest: "Warnweste",
     ppeTypeOther: "Sonstige",
+    ppeTypeHelmetChin: "Schutzhelm mit Kinnriemen",
+    ppeTypeGlassesKN: "Kratzfeste und beschlagfreie Schutzbrille (KN)",
+    ppeTypeHiVis: "Warnschutzkleidung Klasse 2/3",
+    ppeTypeBootsS3S7: "Knöchelhohe Sicherheitsschuhe S3/S7",
+    ppeTypeHearingReady: "Gehörschutz einsatzbereit",
+    ppeTypeGlovesCutDE: "Schnittschutzhandschuhe Level D/E",
+    ppeTypeKneeProtection: "Knieschutz / integrierte Kniepolster",
+    ppeTypeChemicalGloves: "Chemikalienschutzhandschuhe mit langem Schaft",
+    ppeTypeMaskFFP: "Atemschutzmaske FFP2/FFP3",
+    ppeTypeFaceShield: "Gesichtsschutz über Schutzbrille",
+    ppeTypeRubberBoots: "Wasserdichte Gummi-Sicherheitsschuhe",
+    ppeTypeHarnessFull: "Auffanggurt für den ganzen Körper",
+    ppeTypeOtherCustom: "Sonstige — manuell eintragen",
     ppeSizes: "Mitarbeitergrößen",
     ppeEmployeeSummary: "PSA-Übersicht Mitarbeiter",
     ppeFormHint: "Füllen Sie die Daten der ausgegebenen PSA aus. Bestehende PSA und Historie werden nicht gelöscht.",
@@ -3629,6 +3668,22 @@ function SectionTitle({ icon, title }) { return <div className="mb-2 mt-6 flex i
 
 function ppeCanonicalType(value) {
   const v = String(value || "").toLowerCase();
+
+  // Szczegółowe typy PPE — dodane bez usuwania starych typów i danych.
+  if (["chin strap", "paskiem podbródkowym", "paskiem podbrodkowym", "kinnriemen"].some((x) => v.includes(x))) return "helmetChin";
+  if (["scratch-resistant", "anti-fog", "zarysowania", "zaparowanie", "beschlag", "kratzfest"].some((x) => v.includes(x))) return "glassesKN";
+  if (["high-visibility", "widzialności", "widzialnosci", "warnschutz", "class 2/3", "klasse 2/3"].some((x) => v.includes(x))) return "hiVis";
+  if (["s3/s7", "ankle-high", "za kostkę", "za kostke", "knöchel", "knoechel"].some((x) => v.includes(x))) return "bootsS3S7";
+  if (["ready for use", "gotowe do użycia", "gotowe do uzycia", "einsatzbereit"].some((x) => v.includes(x))) return "hearingReady";
+  if (["cut-resistant", "antyprzecięciowe", "antyprzecieciowe", "schnittschutz", "level d/e", "poziom d/e"].some((x) => v.includes(x))) return "glovesCutDE";
+  if (["knee", "kolan", "nakolanniki", "knieschutz", "kniepolster"].some((x) => v.includes(x))) return "kneeProtection";
+  if (["chemical", "chemoodporne", "chemikalienschutz", "long-cuff", "długim mankietem", "dlugim mankietem", "langem schaft"].some((x) => v.includes(x))) return "chemicalGloves";
+  if (["ffp2", "ffp3", "respiratory", "przeciwpyłowa", "przeciwpylowa", "atemschutz"].some((x) => v.includes(x))) return "maskFFP";
+  if (["face shield", "przyłbica", "przylbica", "gesichtsschutz"].some((x) => v.includes(x))) return "faceShield";
+  if (["rubber", "gumowe", "gummi", "waterproof", "wodoodporne", "wasserdicht"].some((x) => v.includes(x))) return "rubberBoots";
+  if (["full body", "fall arrest", "pełne szelki", "pelne szelki", "ganzen körper", "ganzen koerper"].some((x) => v.includes(x))) return "harnessFull";
+
+  // Stare typy — zostają, żeby stare wpisy PPE działały dalej.
   if (["kask", "helmet", "helm"].some((x) => v.includes(x))) return "helmet";
   if (["buty", "shoes", "schuhe", "sicherheitsschuhe"].some((x) => v.includes(x))) return "shoes";
   if (["szelki", "harness", "auffanggurt"].some((x) => v.includes(x))) return "harness";
@@ -3644,6 +3699,20 @@ function ppeCanonicalType(value) {
 function ppeTypeLabel(value, T) {
   const key = ppeCanonicalType(value);
   const map = {
+    helmetChin: T.ppeTypeHelmetChin || "Safety helmet with chin strap",
+    glassesKN: T.ppeTypeGlassesKN || "Safety glasses, scratch-resistant & anti-fog KN",
+    hiVis: T.ppeTypeHiVis || "High-visibility clothing Class 2/3",
+    bootsS3S7: T.ppeTypeBootsS3S7 || "Ankle-high safety boots S3/S7",
+    hearingReady: T.ppeTypeHearingReady || "Hearing protection ready for use",
+    glovesCutDE: T.ppeTypeGlovesCutDE || "Cut-resistant gloves Level D/E",
+    kneeProtection: T.ppeTypeKneeProtection || "Knee protection / integrated knee pads",
+    chemicalGloves: T.ppeTypeChemicalGloves || "Chemical protective long-cuff gloves",
+    maskFFP: T.ppeTypeMaskFFP || "Respiratory mask FFP2/FFP3",
+    faceShield: T.ppeTypeFaceShield || "Face shield worn over safety glasses",
+    rubberBoots: T.ppeTypeRubberBoots || "Waterproof rubber safety boots",
+    harnessFull: T.ppeTypeHarnessFull || "Full body fall arrest harness",
+
+    // Stare typy — zostawione dla kompatybilności ze starymi rekordami PPE.
     helmet: T.ppeTypeHelmet || "Kask",
     shoes: T.ppeTypeShoes || "Buty ochronne",
     harness: T.ppeTypeHarness || "Szelki bezpieczeństwa",
@@ -3655,22 +3724,34 @@ function ppeTypeLabel(value, T) {
     vest: T.ppeTypeVest || "Kamizelka",
     other: T.ppeTypeOther || "Inne",
   };
-  return map[key] || value || "—";
+
+  const raw = String(value || "");
+  const otherLabels = ["inne", "other", "sonstige"];
+  if (key === "other" && raw && !otherLabels.includes(raw.toLowerCase())) return raw;
+  return map[key] || raw || "—";
 }
 
 function ppeBaseTypes(T) {
   return [
-    T.ppeTypeHelmet || "Kask",
-    T.ppeTypeShoes || "Buty ochronne",
-    T.ppeTypeHarness || "Szelki bezpieczeństwa",
-    T.ppeTypeJacket || "Kurtka",
-    T.ppeTypeGloves || "Rękawice",
-    T.ppeTypeGlasses || "Okulary ochronne",
-    T.ppeTypeHearing || "Ochronniki słuchu",
-    T.ppeTypeMask || "Maska",
-    T.ppeTypeVest || "Kamizelka",
+    T.ppeTypeHelmetChin || "Safety helmet with chin strap",
+    T.ppeTypeGlassesKN || "Safety glasses, scratch-resistant & anti-fog KN",
+    T.ppeTypeHiVis || "High-visibility clothing Class 2/3",
+    T.ppeTypeBootsS3S7 || "Ankle-high safety boots S3/S7",
+    T.ppeTypeHearingReady || "Hearing protection ready for use",
+    T.ppeTypeGlovesCutDE || "Cut-resistant gloves Level D/E",
+    T.ppeTypeKneeProtection || "Knee protection / integrated knee pads",
+    T.ppeTypeChemicalGloves || "Chemical protective long-cuff gloves",
+    T.ppeTypeMaskFFP || "Respiratory mask FFP2/FFP3",
+    T.ppeTypeFaceShield || "Face shield worn over safety glasses",
+    T.ppeTypeRubberBoots || "Waterproof rubber safety boots",
+    T.ppeTypeHarnessFull || "Full body fall arrest harness",
     T.ppeTypeOther || "Inne",
   ];
+}
+
+function isPpeOtherValue(value, T) {
+  const v = String(value || "").toLowerCase();
+  return v === String(T.ppeTypeOther || "Inne").toLowerCase() || ["inne", "other", "sonstige"].includes(v);
 }
 
 function ppeRequiredCanonicalTypes() {
@@ -3862,7 +3943,11 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
           types={ppeTypes}
           statuses={ppeStatuses}
           onClose={() => setEditing(null)}
-          onSave={() => { onSave(editing); setEditing(null); }}
+          onSave={() => {
+            const finalType = isPpeOtherValue(editing.type, T) && editing.customType ? editing.customType : editing.type;
+            onSave({ ...editing, type: finalType, customType: "" });
+            setEditing(null);
+          }}
         />
       )}
     </section>
@@ -3883,6 +3968,9 @@ function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSa
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <FormSelect label={T.person || "Osoba"} value={form.person || ""} options={people} onChange={(v) => set("person", v)} />
         <FormSelect label={T.ppeType || "Rodzaj PPE"} value={form.type || ""} options={types} onChange={(v) => set("type", v)} />
+        {isPpeOtherValue(form.type, T) && (
+          <Field label={T.ppeTypeOtherCustom || "Inne — wpisz ręcznie"} value={form.customType || ""} onChange={(v) => set("customType", v)} />
+        )}
         <Field label={T.ppeItem || "Nazwa / model"} value={form.name || ""} onChange={(v) => set("name", v)} />
         <Field label={T.ppeSize || "Rozmiar"} value={form.size || ""} onChange={(v) => set("size", v)} />
         <Field label={T.serial || "Numer seryjny"} value={form.serial || ""} onChange={(v) => set("serial", v)} />
