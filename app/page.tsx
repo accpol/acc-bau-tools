@@ -2512,7 +2512,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          <aside className="space-y-5">
+          <aside className="space-y-5 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto lg:pr-2">
             {selected && <ToolDetails T={T} tool={selected} isAdmin={isAdmin} history={history.filter((h) => h.toolId === selected.id)} onEdit={() => openEditTool(selected)} onDelete={async () => {
                 if (!isAdmin) return alert(T.noPermission);
                 if (!confirm(`Usunąć narzędzie: ${selected.name}?`)) return;
