@@ -1,60 +1,49 @@
 "use client";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Command, FleetFile, UploadRequest } from "./schema";
-let client: SupabaseClient | null = null;
-export function fleetClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Brakuje konfiguracji Supabase. Zobacz START-POJAZDY.md.");
-  if (!client) client = createClient(url, key, { auth: { storageKey: "acc-fleet-auth-v1", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-  return client;
-}
-export class ApiError extends Error {
-  constructor(message: string, public status: number) { super(message); this.name = "ApiError"; }
-}
-export async function api<T>(path = "", init: RequestInit = {}): Promise<T> {
-  const { data: { session } } = await fleetClient().auth.getSession();
-  if (!session) throw new ApiError("Zaloguj się do modułu Pojazdy.", 401);
-  let result: Response;
+import { createClient } from "@supabase/supabase-js";
+import type { FileCategory, FleetFile } from "./types";
+export class ApiError extends Error { constructor(public code: string, public status: number) { super(code); } }
+export async function api<T>(path: string, input?: unknown): Promise<T> {
+  const controller = new AbortController(); const timer = window.setTimeout(() => controller.abort(), 65_000);
   try {
-    result = await fetch(`/api/fleet${path}`, { ...init, cache: "no-store", headers: {
-      ...init.headers, "Authorization": `Bearer ${session.access_token}`, ...(init.body ? { "Content-Type": "application/json" } : {}),
-    } });
-  } catch { throw new ApiError("Brak połączenia. Zmiany nie zostały potwierdzone. Zachowaj formularz i spróbuj ponownie.", 0); }
-  const data = await result.json().catch(() => ({ error: "Serwer nie zwrócił poprawnej odpowiedzi." }));
-  if (!result.ok) throw new ApiError(data.error || `Błąd serwera (${result.status}).`, result.status);
-  return data as T;
+    const response = await fetch(`/api/fleet/${path}`, { method: input === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", signal: controller.signal, ...(input === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }) });
+    const json = await response.json().catch(() => ({ error: "SERVER_ERROR" }));
+    if (!response.ok) throw new ApiError(json.error || "SERVER_ERROR", response.status);
+    return json as T;
+  } catch (e) { if (e instanceof ApiError) throw e; throw new ApiError("NETWORK_ERROR", 0); }
+  finally { window.clearTimeout(timer); }
 }
-export async function send(command: Command): Promise<void> {
-  await api("", { method: "POST", body: JSON.stringify(command) });
+export async function preparePhoto(original: File, category: FileCategory): Promise<File> {
+  if (original.size > 20 * 1024 * 1024) throw new ApiError("FILE_TYPE_SIZE", 400);
+  if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(original.type)) throw new ApiError("FILE_TYPE_SIZE", 400);
+  if (category !== "photo") return original; // Never degrade invoice scans or PDFs.
+  if (!original.type.startsWith("image/")) throw new ApiError("FILE_TYPE_SIZE", 400);
+  const url = URL.createObjectURL(original);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve,reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = url; });
+    if (Math.max(image.width, image.height) <= 1920 && original.size < 2 * 1024 * 1024) return original;
+    const scale = Math.min(1, 1920 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas"); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
+    const ctx = canvas.getContext("2d"); if (!ctx) throw new ApiError("FILE_ERROR", 400);
+    ctx.fillStyle = "white"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(image,0,0,canvas.width,canvas.height);
+    const blob = await new Promise<Blob>((resolve,reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error("IMAGE")), "image/jpeg", 0.86));
+    return new File([blob], original.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } finally { URL.revokeObjectURL(url); }
 }
-export type PendingFile = {
-  key: string; file: File; kind: FleetFile["kind"];
-  prepared?: { id: string; path: string; token: string };
-  ready?: boolean;
-};
-export async function uploadFiles(vehicleId: string, files: PendingFile[], onUpdate: (key: string, patch: Partial<PendingFile>) => void, onProgress: (message: string) => void): Promise<string[]> {
-  const ids: string[] = [];
-  for (const [index, item] of files.entries()) {
-    onProgress(`Plik ${index + 1}/${files.length}: ${item.file.name}`);
-    if (item.ready && item.prepared) { ids.push(item.prepared.id); continue; }
-    const data: UploadRequest = { vehicleId, name: item.file.name, mime: item.file.type as UploadRequest["mime"], bytes: item.file.size, kind: item.kind };
-    const prepared = item.prepared || await api<{ id: string; path: string; token: string }>("/files", { method: "POST", body: JSON.stringify({ action: "prepare", data }) });
-    // Also retain in the in-flight array, so a failure never discards the upload identifier.
-    item.prepared = prepared; onUpdate(item.key, { prepared });
-    const uploaded = await fleetClient().storage.from("acc-fleet-private").uploadToSignedUrl(prepared.path, prepared.token, item.file, { contentType: item.file.type });
-    // If the upload was already accepted before a lost network reply, completion is authoritative.
-    try {
-      await api("/files", { method: "POST", body: JSON.stringify({ action: "complete", data: { id: prepared.id } }) });
-    } catch (error) {
-      if (uploaded.error) throw new Error(`Nie udało się wysłać ${item.file.name}: ${uploaded.error.message}`);
-      throw error;
-    }
-    item.ready = true; onUpdate(item.key, { ready: true }); ids.push(prepared.id);
+export async function uploadFile(vehicleId: string, id: string, file: File, category: FileCategory): Promise<FleetFile> {
+  const info = await api<{ ready?: boolean; file?: FleetFile; path: string; token: string; bucket: string }>("uploads", { id, vehicleId, name: file.name, mime: file.type, size: file.size, category });
+  if (info.ready && info.file) return info.file;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new ApiError("SETUP_REQUIRED", 503);
+  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await client.storage.from(info.bucket).uploadToSignedUrl(info.path, info.token, file, { contentType: file.type, cacheControl: "3600" });
+  // A retry may encounter an already uploaded object. Finalization is idempotent.
+  if (error) {
+    try { return (await api<{ file: FleetFile }>(`uploads/${id}/complete`, {})).file; }
+    catch { throw new ApiError("UPLOAD_ERROR", 503); }
   }
-  onProgress("");
-  return ids;
+  return (await api<{ file: FleetFile }>(`uploads/${id}/complete`, {})).file;
 }
-export async function discardFiles(files: PendingFile[]): Promise<void> {
-  await Promise.allSettled(files.filter((f) => f.prepared).map((f) => api("/files", { method: "POST", body: JSON.stringify({ action: "discard", data: { id: f.prepared!.id } }) })));
+export function downloadText(name: string, text: string, mime: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
 }

@@ -1,0 +1,5 @@
+
+> acc-bau-tools@0.1.0 check:source
+> node scripts/check-syntax.cjs
+
+OK: składnia 17 plików TS/TSX; strict TypeScript: 5 modułów logiki bez zewnętrznych zależności.

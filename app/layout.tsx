@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ACC BAU • Narzędzia, BHP i Pojazdy",
-  description: "Zarządzanie sprzętem, środkami ochrony i flotą ACC BAU",
+  title: "ACC BAU • Tools, BHP i Pojazdy",
+  description: "Narzędzia, środki ochrony i flota ACC BAU",
 };
 
 export default function RootLayout({

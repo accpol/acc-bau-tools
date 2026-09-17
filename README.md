@@ -1,59 +1,44 @@
-# ACC BAU Tools — Narzędzia, BHP i Pojazdy
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Wersja kodu: **0.2.0, 17.09.2026**.
+## Getting Started
 
-Rozbudowa źródeł z `acc-bau-tools-main.zip`. Zachowano dotychczasowe moduły Narzędzia i BHP/PPE oraz ich logowanie PIN-em. Nowy moduł Pojazdy korzysta z osobnych tabel, prywatnego Storage i kont Supabase Auth.
+First, run the development server:
 
-**To źródła do wdrożenia testowego, nie potwierdzona działająca instalacja produkcyjna.** W środowisku przygotowania wykonano 105 testów czystej logiki i kontrolę składni 21 plików TS/TSX. Nie wykonano pełnego buildu, pełnego sprawdzenia typów ani integracji z prawdziwą bazą. Szczegóły w `docs/WYNIKI-TESTOW.md`.
-
-## Dokumenty
-
-- `START-POJAZDY.md` — uruchomienie, konta, Vercel, Supabase, bezpieczeństwo i odbiór.
-- `AUDYT-KODU.md` — co znaleziono, co poprawiono i co nadal wymaga przebudowy.
-- `docs/FUNKCJE-POJAZDOW.md` — instrukcja codziennej obsługi.
-- `docs/WYNIKI-TESTOW.md` — rzeczywisty zakres testów i ograniczenia.
-- `supabase/migrations/202609170001_fleet.sql` — nowe tabele, uprawnienia, Storage, transakcyjny zapis.
-
-## Uruchomienie lokalne
-
-Node.js 22, następnie:
-
-```sh
-npm ci
-# Utwórz .env.local na podstawie .env.example; wpisz własne dane prywatnie.
+```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Przed wdrożeniem:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```sh
-npm run check:syntax
-npm test
-npm run typecheck
-npm run build
-```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-`npm test` obejmuje rzeczywisty silnik operacji, nie React, sieć, Zod ani SQL. Nie zastępuje testów odbiorowych.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Struktura
+## Learn More
 
-```text
-app/page.tsx                     Dotychczasowe Narzędzia / BHP + poprawki
-app/vehicles/page.tsx            Nowa zakładka /vehicles
-app/api/fleet/route.ts           Odczyty i polecenia floty
-app/api/fleet/files/route.ts     Prywatne załączniki i podpisane adresy
-components/fleet/                Widoki, formularze, elementy interfejsu
-lib/fleet/schema.ts             Walidacja żądań i typy
-lib/fleet/operations.ts         Reguły biznesowe, uprawnienia, liczniki
-lib/fleet/domain.ts             Walidacja → silnik operacji
-lib/fleet/logic.ts              Terminy, daty, koszty, CSV, formaty plików
-lib/fleet/client.ts             Sesja, HTTP i wysyłanie załączników
-lib/fleet/server.ts             Weryfikacja sesji i dostęp serwerowy do bazy
-lib/legacy.ts                   Pomocnicza logika bez przepisywania starej aplikacji
-supabase/migrations/             Migracja dodająca moduł floty
-scripts/                        Testy składni/logiki i ręczne porządkowanie szkiców
-```
+To learn more about Next.js, take a look at the following resources:
 
-Nowy moduł jest po polsku. Dotychczasowe przełączanie PL/EN/DE w Narzędziach/BHP pozostawiono. Nie dodano automatycznych wiadomości e-mail/SMS, GPS, OCR faktur ani synchronizacji z księgowością.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Nie publikuj klucza `SUPABASE_SERVICE_ROLE_KEY`. Nigdy nie używaj go w zmiennej `NEXT_PUBLIC_*`, w kodzie przeglądarki ani w repozytorium.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+---
+
+## ACC BAU — Pojazdy, BHP i ochrona istniejących danych (17.09.2026)
+
+Instrukcja tej paczki: [START_TUTAJ_PL.md](./START_TUTAJ_PL.md).
+
+Najpierw kopia bazy i plików, konfiguracja nowego modułu oraz wdrożenie testowe. Ten ZIP jest kodem źródłowym, nie backupem danych. Pełny build i rzeczywista integracja Supabase wymagają weryfikacji przed produkcją. Raport analizy, opis testów, obsługa i wdrożenie znajdują się w katalogu `docs/`.

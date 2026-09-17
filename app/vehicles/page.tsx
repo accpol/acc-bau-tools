@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
-import FleetApp from "@/components/fleet/FleetApp";
+"use client";
+import FleetPage from "@/components/fleet/FleetPage";
 
-export const metadata: Metadata = {
-  title: "Pojazdy | ACC BAU Tools",
-  description: "Flota ACC BAU: pojazdy, kierowcy, przebieg, serwisy, naprawy, faktury i terminy.",
-  robots: { index: false, follow: false },
-};
-export default function VehiclesPage() { return <FleetApp />; }
+export default function VehiclesCompatibilityPage() {
+  return (
+    <main className="min-h-screen bg-zinc-100 p-4 sm:p-6">
+      <div className="mx-auto max-w-[1600px]">
+        <FleetPage lang="pl" user="" people={[]} projects={[]} />
+      </div>
+    </main>
+  );
+}

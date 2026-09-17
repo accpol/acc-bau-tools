@@ -1,0 +1,626 @@
+
+> acc-bau-tools@0.1.0 test
+> node --require ./scripts/test-register.cjs --test tests/*.test.cjs
+
+TAP version 13
+# Subtest: nowy pojazd nie mutuje payloadu; przebieg zerowy jest poprawny
+ok 1 - nowy pojazd nie mutuje payloadu; przebieg zerowy jest poprawny
+  ---
+  duration_ms: 13.980686
+  type: 'test'
+  ...
+# Subtest: VIN i rejestracja normalizowane bez zmiany ID
+ok 2 - VIN i rejestracja normalizowane bez zmiany ID
+  ---
+  duration_ms: 0.540974
+  type: 'test'
+  ...
+# Subtest: pracownik nie tworzy pojazdu
+ok 3 - pracownik nie tworzy pojazdu
+  ---
+  duration_ms: 0.38558
+  type: 'test'
+  ...
+# Subtest: ponowne utworzenie istniejącego ID jest konfliktem
+ok 4 - ponowne utworzenie istniejącego ID jest konfliktem
+  ---
+  duration_ms: 0.399922
+  type: 'test'
+  ...
+# Subtest: zła wersja blokuje nadpisanie
+ok 5 - zła wersja blokuje nadpisanie
+  ---
+  duration_ms: 0.302586
+  type: 'test'
+  ...
+# Subtest: błędny VIN odrzucony: BADVIN
+ok 6 - błędny VIN odrzucony: BADVIN
+  ---
+  duration_ms: 0.156335
+  type: 'test'
+  ...
+# Subtest: błędny VIN odrzucony: 1234567890123456I
+ok 7 - błędny VIN odrzucony: 1234567890123456I
+  ---
+  duration_ms: 0.139409
+  type: 'test'
+  ...
+# Subtest: błędny VIN odrzucony: 1234567890123456O
+ok 8 - błędny VIN odrzucony: 1234567890123456O
+  ---
+  duration_ms: 0.107211
+  type: 'test'
+  ...
+# Subtest: przebieg odrzucony: -1
+ok 9 - przebieg odrzucony: -1
+  ---
+  duration_ms: 0.261163
+  type: 'test'
+  ...
+# Subtest: przebieg odrzucony: abc
+ok 10 - przebieg odrzucony: abc
+  ---
+  duration_ms: 0.263787
+  type: 'test'
+  ...
+# Subtest: przebieg odrzucony: NaN
+ok 11 - przebieg odrzucony: NaN
+  ---
+  duration_ms: 0.158208
+  type: 'test'
+  ...
+# Subtest: przebieg odrzucony: Infinity
+ok 12 - przebieg odrzucony: Infinity
+  ---
+  duration_ms: 0.097036
+  type: 'test'
+  ...
+# Subtest: przebieg odrzucony: 2.5
+ok 13 - przebieg odrzucony: 2.5
+  ---
+  duration_ms: 0.049094
+  type: 'test'
+  ...
+# Subtest: cena z przecinkiem akceptowana
+ok 14 - cena z przecinkiem akceptowana
+  ---
+  duration_ms: 0.069634
+  type: 'test'
+  ...
+# Subtest: błędna data odrzucona: 2026-02-30
+ok 15 - błędna data odrzucona: 2026-02-30
+  ---
+  duration_ms: 0.076115
+  type: 'test'
+  ...
+# Subtest: błędna data odrzucona: 2026-13-01
+ok 16 - błędna data odrzucona: 2026-13-01
+  ---
+  duration_ms: 0.043235
+  type: 'test'
+  ...
+# Subtest: błędna data odrzucona: 01-01-2026
+ok 17 - błędna data odrzucona: 01-01-2026
+  ---
+  duration_ms: 0.051969
+  type: 'test'
+  ...
+# Subtest: dodanie miesiąca z 31 stycznia => 28 lutego
+ok 18 - dodanie miesiąca z 31 stycznia => 28 lutego
+  ---
+  duration_ms: 0.138158
+  type: 'test'
+  ...
+# Subtest: rok przestępny => 29 lutego
+ok 19 - rok przestępny => 29 lutego
+  ---
+  duration_ms: 0.065188
+  type: 'test'
+  ...
+# Subtest: UTC/Berlin: prawidłowy dzień po północy
+ok 20 - UTC/Berlin: prawidłowy dzień po północy
+  ---
+  duration_ms: 0.19249
+  type: 'test'
+  ...
+# Subtest: różnica dni niezależna od zmiany czasu
+ok 21 - różnica dni niezależna od zmiany czasu
+  ---
+  duration_ms: 0.102214
+  type: 'test'
+  ...
+# Subtest: przegląd przeterminowany datą mimo niskiego licznika
+ok 22 - przegląd przeterminowany datą mimo niskiego licznika
+  ---
+  duration_ms: 0.246421
+  type: 'test'
+  ...
+# Subtest: przegląd przeterminowany km mimo przyszłej daty
+ok 23 - przegląd przeterminowany km mimo przyszłej daty
+  ---
+  duration_ms: 0.095494
+  type: 'test'
+  ...
+# Subtest: termin dzisiaj oznaczony w ostrzeżeniach
+ok 24 - termin dzisiaj oznaczony w ostrzeżeniach
+  ---
+  duration_ms: 0.08628
+  type: 'test'
+  ...
+# Subtest: licznik w strefie ostrzeżenia
+ok 25 - licznik w strefie ostrzeżenia
+  ---
+  duration_ms: 0.07959
+  type: 'test'
+  ...
+# Subtest: brak licznika nie może dać zielonego statusu
+ok 26 - brak licznika nie może dać zielonego statusu
+  ---
+  duration_ms: 0.073731
+  type: 'test'
+  ...
+# Subtest: brak daty i km po jednorazowym wykonaniu wymaga uzupełnienia
+ok 27 - brak daty i km po jednorazowym wykonaniu wymaga uzupełnienia
+  ---
+  duration_ms: 0.100772
+  type: 'test'
+  ...
+# Subtest: plan bez daty i km odrzucony przy tworzeniu
+ok 28 - plan bez daty i km odrzucony przy tworzeniu
+  ---
+  duration_ms: 0.143856
+  type: 'test'
+  ...
+# Subtest: zerowy interwał nie tworzy zapętlonego terminu
+ok 29 - zerowy interwał nie tworzy zapętlonego terminu
+  ---
+  duration_ms: 0.095694
+  type: 'test'
+  ...
+# Subtest: zapis serwisu przesuwa tylko odhaczone czynności
+ok 30 - zapis serwisu przesuwa tylko odhaczone czynności
+  ---
+  duration_ms: 0.839644
+  type: 'test'
+  ...
+# Subtest: serwis pozwala wpisać indywidualny termin zamiast automatu
+ok 31 - serwis pozwala wpisać indywidualny termin zamiast automatu
+  ---
+  duration_ms: 0.512382
+  type: 'test'
+  ...
+# Subtest: wpis starego serwisu nie przesuwa nowszego wykonania
+ok 32 - wpis starego serwisu nie przesuwa nowszego wykonania
+  ---
+  duration_ms: 0.494575
+  type: 'test'
+  ...
+# Subtest: stary serwis bez aktualizacji planów można dopisać
+ok 33 - stary serwis bez aktualizacji planów można dopisać
+  ---
+  duration_ms: 0.467284
+  type: 'test'
+  ...
+# Subtest: odczyt licznika nie może zaprzeczać wcześniejszej dacie
+ok 34 - odczyt licznika nie może zaprzeczać wcześniejszej dacie
+  ---
+  duration_ms: 0.456057
+  type: 'test'
+  ...
+# Subtest: odczyt historyczny sprawdzany także względem późniejszej daty
+ok 35 - odczyt historyczny sprawdzany także względem późniejszej daty
+  ---
+  duration_ms: 2.011438
+  type: 'test'
+  ...
+# Subtest: historyczna faktura nie cofa aktualnego licznika
+ok 36 - historyczna faktura nie cofa aktualnego licznika
+  ---
+  duration_ms: 0.408645
+  type: 'test'
+  ...
+# Subtest: tego samego dnia bieżący licznik to najwyższy odczyt
+ok 37 - tego samego dnia bieżący licznik to najwyższy odczyt
+  ---
+  duration_ms: 0.223987
+  type: 'test'
+  ...
+# Subtest: korekta licznika zachowuje oryginalny odczyt
+ok 38 - korekta licznika zachowuje oryginalny odczyt
+  ---
+  duration_ms: 0.496798
+  type: 'test'
+  ...
+# Subtest: korekta wymaga uzasadnienia
+ok 39 - korekta wymaga uzasadnienia
+  ---
+  duration_ms: 0.742948
+  type: 'test'
+  ...
+# Subtest: pracownik dopisuje przebieg swojego pojazdu
+ok 40 - pracownik dopisuje przebieg swojego pojazdu
+  ---
+  duration_ms: 0.530959
+  type: 'test'
+  ...
+# Subtest: pracownik nie zapisuje cudzego pojazdu
+ok 41 - pracownik nie zapisuje cudzego pojazdu
+  ---
+  duration_ms: 0.322045
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: update
+ok 42 - pracownik nie wykonuje akcji admina: update
+  ---
+  duration_ms: 0.236125
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: assignment
+ok 43 - pracownik nie wykonuje akcji admina: assignment
+  ---
+  duration_ms: 0.208875
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: service
+ok 44 - pracownik nie wykonuje akcji admina: service
+  ---
+  duration_ms: 0.378619
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: archive
+ok 45 - pracownik nie wykonuje akcji admina: archive
+  ---
+  duration_ms: 0.202846
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: restore
+ok 46 - pracownik nie wykonuje akcji admina: restore
+  ---
+  duration_ms: 0.328604
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: plan_add
+ok 47 - pracownik nie wykonuje akcji admina: plan_add
+  ---
+  duration_ms: 0.177477
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: cover
+ok 48 - pracownik nie wykonuje akcji admina: cover
+  ---
+  duration_ms: 0.161923
+  type: 'test'
+  ...
+# Subtest: pracownik nie wykonuje akcji admina: mileage_correction
+ok 49 - pracownik nie wykonuje akcji admina: mileage_correction
+  ---
+  duration_ms: 0.216917
+  type: 'test'
+  ...
+# Subtest: przekazanie zachowuje poprzedniego kierowcę w historii
+ok 50 - przekazanie zachowuje poprzedniego kierowcę w historii
+  ---
+  duration_ms: 0.660595
+  type: 'test'
+  ...
+# Subtest: pilna usterka wyłącza pojazd z użytkowania
+ok 51 - pilna usterka wyłącza pojazd z użytkowania
+  ---
+  duration_ms: 0.468866
+  type: 'test'
+  ...
+# Subtest: zamknięcie usterki nie włącza automatycznie pojazdu do ruchu
+ok 52 - zamknięcie usterki nie włącza automatycznie pojazdu do ruchu
+  ---
+  duration_ms: 0.368995
+  type: 'test'
+  ...
+# Subtest: archiwizacja zachowuje wszystkie dane i terminy
+ok 53 - archiwizacja zachowuje wszystkie dane i terminy
+  ---
+  duration_ms: 0.320202
+  type: 'test'
+  ...
+# Subtest: zarchiwizowany pojazd można przywrócić
+ok 54 - zarchiwizowany pojazd można przywrócić
+  ---
+  duration_ms: 0.342606
+  type: 'test'
+  ...
+# Subtest: zarchiwizowanego pojazdu nie można przypadkowo edytować
+ok 55 - zarchiwizowanego pojazdu nie można przypadkowo edytować
+  ---
+  duration_ms: 0.410127
+  type: 'test'
+  ...
+# Subtest: plan po archiwizacji pozostaje w tablicy
+ok 56 - plan po archiwizacji pozostaje w tablicy
+  ---
+  duration_ms: 0.381945
+  type: 'test'
+  ...
+# Subtest: kosztów netto/brutto i walut nie sumujemy razem
+ok 57 - kosztów netto/brutto i walut nie sumujemy razem
+  ---
+  duration_ms: 0.291199
+  type: 'test'
+  ...
+# Subtest: CSV blokuje interpretację formuły: =CMD()
+ok 58 - CSV blokuje interpretację formuły: =CMD()
+  ---
+  duration_ms: 0.175313
+  type: 'test'
+  ...
+# Subtest: CSV blokuje interpretację formuły: +12
+ok 59 - CSV blokuje interpretację formuły: +12
+  ---
+  duration_ms: 0.069795
+  type: 'test'
+  ...
+# Subtest: CSV blokuje interpretację formuły:  -123
+ok 60 - CSV blokuje interpretację formuły:  -123
+  ---
+  duration_ms: 0.037006
+  type: 'test'
+  ...
+# Subtest: CSV blokuje interpretację formuły: @SUM(A1)
+ok 61 - CSV blokuje interpretację formuły: @SUM(A1)
+  ---
+  duration_ms: 0.031978
+  type: 'test'
+  ...
+# Subtest: CSV prawidłowo cytuje cudzysłowy
+ok 62 - CSV prawidłowo cytuje cudzysłowy
+  ---
+  duration_ms: 0.05283
+  type: 'test'
+  ...
+# Subtest: edycja terminu zachowuje poprzedni plan w zdarzeniu i ostatni serwis
+ok 63 - edycja terminu zachowuje poprzedni plan w zdarzeniu i ostatni serwis
+  ---
+  duration_ms: 0.545411
+  type: 'test'
+  ...
+# Subtest: późniejsze dołączenie FV nie edytuje istniejącej naprawy
+ok 64 - późniejsze dołączenie FV nie edytuje istniejącej naprawy
+  ---
+  duration_ms: 0.408134
+  type: 'test'
+  ...
+# Subtest: ustawienia ogólne zachowują PPE i nieznane pola z serwera
+ok 65 - ustawienia ogólne zachowują PPE i nieznane pola z serwera
+  ---
+  duration_ms: 1.856435
+  type: 'test'
+  ...
+# Subtest: równoczesne dopisanie dwóch PPE nie gubi żadnego
+ok 66 - równoczesne dopisanie dwóch PPE nie gubi żadnego
+  ---
+  duration_ms: 0.680094
+  type: 'test'
+  ...
+# Subtest: pominięcie PPE w tablicy nie usuwa rekordu
+ok 67 - pominięcie PPE w tablicy nie usuwa rekordu
+  ---
+  duration_ms: 0.1661
+  type: 'test'
+  ...
+# Subtest: niezależne zmiany pól jednego PPE są łączone
+ok 68 - niezależne zmiany pól jednego PPE są łączone
+  ---
+  duration_ms: 0.37177
+  type: 'test'
+  ...
+# Subtest: konflikt tego samego pola blokuje zapis
+ok 69 - konflikt tego samego pola blokuje zapis
+  ---
+  duration_ms: 0.479101
+  type: 'test'
+  ...
+# Subtest: ID duplikatu nie nadpisuje nowego wpisu z innego komputera
+ok 70 - ID duplikatu nie nadpisuje nowego wpisu z innego komputera
+  ---
+  duration_ms: 0.189035
+  type: 'test'
+  ...
+# Subtest: archiwizacja zachowuje historię i zdjęcia PPE
+ok 71 - archiwizacja zachowuje historię i zdjęcia PPE
+  ---
+  duration_ms: 0.315525
+  type: 'test'
+  ...
+# Subtest: przeglądy narzędzia zachowane nawet przy pominięciu starszej pozycji
+ok 72 - przeglądy narzędzia zachowane nawet przy pominięciu starszej pozycji
+  ---
+  duration_ms: 0.182264
+  type: 'test'
+  ...
+# Subtest: historia bez identyfikatorów jest łączona, nie kasowana
+ok 73 - historia bez identyfikatorów jest łączona, nie kasowana
+  ---
+  duration_ms: 0.452401
+  type: 'test'
+  ...
+# Subtest: polskie daty sortowane chronologicznie
+ok 74 - polskie daty sortowane chronologicznie
+  ---
+  duration_ms: 0.972764
+  type: 'test'
+  ...
+# Subtest: polska data z czasem rozpoznawana
+ok 75 - polska data z czasem rozpoznawana
+  ---
+  duration_ms: 0.255425
+  type: 'test'
+  ...
+# Subtest: błąd localStorage nie usuwa poprzedniej kopii
+ok 76 - błąd localStorage nie usuwa poprzedniej kopii
+  ---
+  duration_ms: 0.220462
+  type: 'test'
+  ...
+# Subtest: REGRESJA: rzeczywisty save SettingsModal przekazuje całe PPE
+ok 77 - REGRESJA: rzeczywisty save SettingsModal przekazuje całe PPE
+  ---
+  duration_ms: 174.014367
+  type: 'test'
+  ...
+# Subtest: REGRESJA: błąd bazy nie zamyka SettingsModal
+ok 78 - REGRESJA: błąd bazy nie zamyka SettingsModal
+  ---
+  duration_ms: 53.936369
+  type: 'test'
+  ...
+# Subtest: kod aplikacji nie ma wywołania DELETE Supabase
+ok 79 - kod aplikacji nie ma wywołania DELETE Supabase
+  ---
+  duration_ms: 0.476197
+  type: 'test'
+  ...
+# Subtest: kod nie czyści pamięci narzędzi i historii
+ok 80 - kod nie czyści pamięci narzędzi i historii
+  ---
+  duration_ms: 0.2523
+  type: 'test'
+  ...
+# Subtest: legacy zapis sprawdza ten sam stan JSON przed zapisem
+ok 81 - legacy zapis sprawdza ten sam stan JSON przed zapisem
+  ---
+  duration_ms: 0.130917
+  type: 'test'
+  ...
+# Subtest: migracja nie modyfikuje istniejących tabel Tools/PPE
+ok 82 - migracja nie modyfikuje istniejących tabel Tools/PPE
+  ---
+  duration_ms: 0.717009
+  type: 'test'
+  ...
+# Subtest: wydruk pojazdu escapuje HTML wpisany przez użytkownika
+ok 83 - wydruk pojazdu escapuje HTML wpisany przez użytkownika
+  ---
+  duration_ms: 103.70394
+  type: 'test'
+  ...
+# Subtest: pierwszy zapis cache zachowuje dokładny oryginał sprzed aktualizacji
+ok 84 - pierwszy zapis cache zachowuje dokładny oryginał sprzed aktualizacji
+  ---
+  duration_ms: 0.175184
+  type: 'test'
+  ...
+# Subtest: brak miejsca na kopię ratunkową blokuje nadpisanie starego cache
+ok 85 - brak miejsca na kopię ratunkową blokuje nadpisanie starego cache
+  ---
+  duration_ms: 0.137867
+  type: 'test'
+  ...
+# Subtest: scrypt: właściwy PIN działa, błędny nie
+ok 86 - scrypt: właściwy PIN działa, błędny nie
+  ---
+  duration_ms: 206.698753
+  type: 'test'
+  ...
+# Subtest: każdy hash ma inną sól
+ok 87 - każdy hash ma inną sól
+  ---
+  duration_ms: 82.549204
+  type: 'test'
+  ...
+# Subtest: za krótki PIN odrzucony
+ok 88 - za krótki PIN odrzucony
+  ---
+  duration_ms: 0.73758
+  type: 'test'
+  ...
+# Subtest: uszkodzony hash nie powoduje przyznania dostępu
+ok 89 - uszkodzony hash nie powoduje przyznania dostępu
+  ---
+  duration_ms: 0.132039
+  type: 'test'
+  ...
+# Subtest: sesja używa HttpOnly, Secure, SameSite strict
+ok 90 - sesja używa HttpOnly, Secure, SameSite strict
+  ---
+  duration_ms: 0.588126
+  type: 'test'
+  ...
+# Subtest: poprawna podpisana sesja odczytuje rolę z bazy
+ok 91 - poprawna podpisana sesja odczytuje rolę z bazy
+  ---
+  duration_ms: 0.634485
+  type: 'test'
+  ...
+# Subtest: zmiana wersji konta unieważnia poprzednią sesję
+ok 92 - zmiana wersji konta unieważnia poprzednią sesję
+  ---
+  duration_ms: 0.346572
+  type: 'test'
+  ...
+# Subtest: wyłączone konto nie może użyć starej sesji
+ok 93 - wyłączone konto nie może użyć starej sesji
+  ---
+  duration_ms: 0.281905
+  type: 'test'
+  ...
+# Subtest: podrobiony podpis sesji jest odrzucony
+ok 94 - podrobiony podpis sesji jest odrzucony
+  ---
+  duration_ms: 0.5914
+  type: 'test'
+  ...
+# Subtest: wylogowanie wygasza ciasteczko
+ok 95 - wylogowanie wygasza ciasteczko
+  ---
+  duration_ms: 0.434243
+  type: 'test'
+  ...
+# Subtest: safeMember nie zwraca hasha PIN
+ok 96 - safeMember nie zwraca hasha PIN
+  ---
+  duration_ms: 0.150147
+  type: 'test'
+  ...
+# Subtest: hash polecenia niezależny od kolejności kluczy JSON
+ok 97 - hash polecenia niezależny od kolejności kluczy JSON
+  ---
+  duration_ms: 6.317
+  type: 'test'
+  ...
+# Subtest: inna treść polecenia daje inny hash idempotencji
+ok 98 - inna treść polecenia daje inny hash idempotencji
+  ---
+  duration_ms: 0.187082
+  type: 'test'
+  ...
+# Subtest: pracownik nie widzi cudzego pojazdu
+ok 99 - pracownik nie widzi cudzego pojazdu
+  ---
+  duration_ms: 0.220853
+  type: 'test'
+  ...
+# Subtest: rola worker nie otrzymuje pól finansowych pojazdu
+ok 100 - rola worker nie otrzymuje pól finansowych pojazdu
+  ---
+  duration_ms: 0.129776
+  type: 'test'
+  ...
+# Subtest: cross-origin zapis jest odrzucony
+ok 101 - cross-origin zapis jest odrzucony
+  ---
+  duration_ms: 12.133806
+  type: 'test'
+  ...
+# Subtest: same-origin JSON dopuszczony przez bramkę CSRF
+ok 102 - same-origin JSON dopuszczony przez bramkę CSRF
+  ---
+  duration_ms: 0.161834
+  type: 'test'
+  ...
+1..102
+# tests 102
+# suites 0
+# pass 102
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 824.223816

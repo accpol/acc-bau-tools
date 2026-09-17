@@ -1,0 +1,14 @@
+ACC BAU Tools — poprawka logowania Pojazdów
+
+Ta paczka odpowiada bazie z kolumnami:
+id, name, name_key, pin_hash, role, active, auth_version, created_at, updated_at.
+
+Logowanie Pojazdów ma być przez IMIĘ I NAZWISKO + PIN, NIE przez e-mail.
+
+Ważne:
+- nie uruchamiaj ponownie starej migracji fleet.sql,
+- nie kasuj tabel tools/history/settings,
+- podmiana tych plików nie usuwa danych Supabase,
+- po wdrożeniu wykonaj Redeploy w Vercel.
+
+Dodałem też stronę zgodności /vehicles, żeby stary link do Pojazdów nie pokazywał już formularza e-mail.
