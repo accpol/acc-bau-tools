@@ -1,0 +1,73 @@
+ACC BAU Tools — naprawa błędu deploymentu z 17.09.2026
+
+TO JEST POPRAWKA DO JUŻ WGRANYCH PLIKÓW, NIE CAŁY PROJEKT.
+Wgraj zawartość tej paczki do głównego katalogu obecnego repozytorium
+(w tym samym miejscu, gdzie są app, components, lib i package.json).
+Nie zastępuj całego repozytorium wyłącznie tą paczką.
+
+CO ZROBIĆ
+1. Rozpakuj ZIP.
+2. GitHub -> repozytorium ACC BAU Tools -> główny katalog.
+3. Add file -> Upload files.
+4. Przeciągnij całą zawartość rozpakowanej paczki do okna przesyłania.
+   Przesyłasz foldery i pliki ZE ŚRODKA, a nie ZIP ani nadrzędny folder.
+5. Commit changes; opis: Naprawa build Pojazdy.
+6. Sprawdź w Vercel nowe wdrożenie odpowiadające tej zmianie.
+   Nie uruchamiaj ponownie starego, błędnego wdrożenia.
+7. Po statusie Ready odśwież aplikację.
+
+NICZEGO NIE KASUJ W SUPABASE. NIE URUCHAMIAJ SQL.
+NIE ZMIENIAJ KLUCZY, HASEŁ ANI ZMIENNYCH VERCEL.
+Poprawka nie zawiera migracji ani operacji na zapisanych danych.
+Nie zmienia kodu Narzędzi/BHP, aktywnego API floty, jej logowania,
+magazynu załączników, bibliotek ani konfiguracji bazy.
+
+PRZYCZYNA
+Wersja e-mailowa v0.2.0 miała dwa pliki API:
+  app/api/fleet/route.ts
+  app/api/fleet/files/route.ts
+Nowsza wersja używa:
+  app/api/fleet/[...path]/route.ts
+Poprzednia paczka nie zawierała zamienników starych plików. Wgrywanie
+nowych plików na istniejące nie usuwa plików pominiętych w nowej paczce.
+Stare API próbowało importować funkcje z nowych, niezgodnych bibliotek.
+Odtworzono wszystkie 17 błędów importów API widocznych na zrzutach.
+Dodatkowo wykryto 11 niezgodnych importów w starych komponentach UI.
+
+ZAKRES POPRAWKI
+Cztery pliki programu:
+- app/api/fleet/route.ts
+- app/api/fleet/files/route.ts
+  Stare adresy API są jawnie wycofane: HTTP 410 CLIENT_UPDATE_REQUIRED.
+  Nie czytają ani nie zapisują bazy. Nie są przekierowywane do operacji
+  zapisu i nie omijają uwierzytelniania. Aktualne adresy logowania,
+  pojazdów i przesyłania/odczytu plików pozostają bez zmian.
+- components/fleet/FleetApp.tsx
+  Stara nazwa komponentu wyświetla aktualny FleetPage, bez logowania e-mailem.
+- components/fleet/ui.tsx
+  Stara nazwa pliku odsyła do aktualnych komponentów common.tsx.
+
+Pozostałe pliki to kontrola zgodności importów, testy regresji,
+zgodność starego zestawu testów z aktualnym poleceniem npm test
+oraz poprawiona nazwa poleceń w pozostawionym workflow GitHub Actions.
+Nie wyłączono sprawdzania typów ani błędów kompilatora.
+
+WERYFIKACJA WYKONANA LOKALNIE
+Odtworzono na kopii połączenie v0.2.0 + najnowszej paczki FIX-Login,
+a następnie wgrano tę poprawkę tak, jak robi to aktualizacja plików.
+- 147 sprawdzonych nazw importów/reeksportów w 27 plikach TS/TSX:
+  0 niezgodności lokalnych importów po poprawce.
+- npm test w połączonej wersji: 224 testy, 224 zaliczone, 0 pominiętych.
+- Kontrola składni 27 plików i strict TypeScript 5 modułów logiki: OK.
+- Czysta najnowsza paczka z poprawką: 119 testów zaliczonych;
+  1 jawnie pominięty test sygnalizuje brak nieużywanego silnika v0.2.0.
+- Porównano 10 chronionych plików z ostatnią paczką: identyczne bajtowo,
+  w tym app/page.tsx, aktywne API floty, kod logowania, package.json,
+  package-lock.json i migracja bazy.
+
+GRANICE SPRAWDZENIA
+Nie wykonano pełnej kompilacji Next.js ani testu z prawdziwą bazą.
+Środowisko nie ma dostępu do registry.npmjs.org; niezbędnych paczek
+nie ma też w lokalnym cache npm. Kontrola importów i testy jednostkowe
+nie zastępują pełnego builda. Pełną kompilację musi potwierdzić Vercel.
+Nie łączono się z repozytorium, Vercel ani bazą użytkownika.

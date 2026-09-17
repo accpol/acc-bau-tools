@@ -1,13 +1,21 @@
+// Compatibility for the retired v0.2.0 engine. Current tests remain separate.
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const base = process.env.FLEET_TEST_DIR;
-if (!base) throw new Error('Run through npm test.');
-const logic = require(path.join(base, 'lib/fleet/logic.js'));
-const { emptyDetails, emptyPlan, defaultPlans } = require(path.join(base, 'lib/fleet/defaults.js'));
-const { applyCommand, FleetError, canOperate, publicEvent, publicVehicle } = require(path.join(base, 'lib/fleet/operations.js'));
-const legacy = require(path.join(base, 'lib/legacy.js'));
+const base = process.env.FLEET_TEST_DIR || path.resolve(__dirname, '..');
+const ext = process.env.FLEET_TEST_DIR ? '.js' : '.ts';
+const legacyPaths = ['lib/fleet/logic', 'lib/fleet/defaults', 'lib/fleet/operations', 'lib/legacy'];
+const legacyPresent = legacyPaths.map(name => fs.existsSync(path.join(base, name + ext)));
+if (legacyPresent.every(present => !present)) {
+  test('Archiwalny silnik v0.2.0: brak w czystej aktualnej paczce', {skip: 'Brak starych plików; bieżący silnik jest testowany w domain.test.cjs.'}, () => {});
+} else {
+  assert.ok(legacyPresent.every(Boolean), 'Niekompletne stare pliki testowe v0.2.0');
+  const logic = require(path.join(base, 'lib/fleet/logic' + ext));
+  const { emptyDetails, emptyPlan, defaultPlans } = require(path.join(base, 'lib/fleet/defaults' + ext));
+  const { applyCommand, FleetError, canOperate, publicEvent, publicVehicle } = require(path.join(base, 'lib/fleet/operations' + ext));
+  const legacy = require(path.join(base, 'lib/legacy' + ext));
 const TODAY = '2026-09-17';
 const admin = { userId: randomUUID(), displayName: 'Administrator testowy', role: 'admin', active: true };
 const worker = { userId: randomUUID(), displayName: 'Kierowca testowy', role: 'worker', active: true };
@@ -141,3 +149,5 @@ test('Technical inspection requires explicit result', () => {const v=car();rejec
 test('Failed inspection cannot extend schedule', () => {const p=plan();const v=car({plans:[p]});rejects(serviceCmd(v,{kind:'inspection',inspectionResult:'failed',completions:[{planId:p.id}]}),v);});
 test('Failed inspection creates critical defect and blocks vehicle', () => {const v=car();const r=run(serviceCmd(v,{kind:'inspection',inspectionResult:'failed'}),v);assert.equal(r.data.status,'out_of_service');assert.equal(r.data.defects[0].severity,'critical');assert.equal(r.event.inspectionResult,'failed');});
 test('Passing inspection alone never resolves outstanding critical defects', () => {const v=car({status:'out_of_service',defects:[{id:randomUUID(),severity:'critical',resolvedAt:null}]});const r=run(serviceCmd(v,{kind:'inspection',inspectionResult:'passed'}),v);assert.equal(r.data.status,'out_of_service');assert.equal(r.data.defects[0].resolvedAt,null);});
+
+}
