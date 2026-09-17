@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
+  Car,
   ClipboardList,
   Edit3,
   FileSpreadsheet,
@@ -28,6 +29,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { fleetToday, addCalendarMonths, dateDays, csv } from "@/lib/fleet/logic";
+import { mergeSettingsChanges, legacyService, legacyNoInspection, latestLegacyInspections, negativeLegacyInspection, legacyPrintDocument } from "@/lib/legacy";
 
 const STORAGE_KEY = "acc_tools_v7";
 const HISTORY_KEY = "acc_history_v7";
@@ -60,7 +63,7 @@ const I18N = {
     person: "Osoba",
     toolsByPeople: "Narzędzia według osób",
     takeover: "Przejmij",
-    excel: "Excel",
+    excel: "Excel (CSV)",
     settings: "Ustawienia",
     demo: "Demo",
     add: "Dodaj",
@@ -341,7 +344,7 @@ const I18N = {
     person: "Person",
     toolsByPeople: "Tools by person",
     takeover: "Receive",
-    excel: "Excel",
+    excel: "Excel (CSV)",
     settings: "Settings",
     demo: "Demo",
     add: "Add",
@@ -622,7 +625,7 @@ const I18N = {
     person: "Person",
     toolsByPeople: "Werkzeuge nach Personen",
     takeover: "Übernehmen",
-    excel: "Excel",
+    excel: "Excel (CSV)",
     settings: "Einstellungen",
     demo: "Demo",
     add: "Hinzufügen",
@@ -924,54 +927,34 @@ function normalizeSettings(value) {
   };
 }
 
-function settingsComparable(value) {
-  const normalized = normalizeSettings(value);
-  const { updatedAt, ...rest } = normalized;
-  return JSON.stringify(rest);
-}
-
-function settingsDifferent(a, b) {
-  return settingsComparable(a) !== settingsComparable(b);
-}
-
-function pickBestSettings(localSettings, serverSettings) {
-  const local = normalizeSettings(localSettings);
-  const server = serverSettings ? normalizeSettings(serverSettings) : null;
-
-  if (!server) return { settings: local, shouldPushLocal: true };
-
-  const localTs = Date.parse(local.updatedAt || "") || 0;
-  const serverTs = Date.parse(server.updatedAt || "") || 0;
-
-  if (localTs && serverTs) {
-    return localTs > serverTs
-      ? { settings: local, shouldPushLocal: true }
-      : { settings: server, shouldPushLocal: false };
-  }
-
-  if (localTs && !serverTs) return { settings: local, shouldPushLocal: true };
-
-  if (!serverTs && settingsDifferent(local, defaultSettings) && !settingsDifferent(server, defaultSettings)) {
-    return { settings: local, shouldPushLocal: true };
-  }
-
-  return { settings: server, shouldPushLocal: false };
-}
-
-async function persistSettingsEverywhere(nextSettings, setSettingsCallback) {
-  const normalized = normalizeSettings({
-    ...nextSettings,
-    updatedAt: nextSettings.updatedAt || new Date().toISOString(),
-  });
-
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized));
-  if (setSettingsCallback) setSettingsCallback(normalized);
-
+async function persistSettingsEverywhere(nextSettings, setSettingsCallback, options = {}) {
+  let normalized = normalizeSettings({ ...nextSettings, updatedAt: new Date().toISOString() });
   if (supabase) {
-    const { error } = await supabase.from("settings").upsert({ id: "main", data: normalized });
-    if (error) throw error;
+    normalized._revision = crypto.randomUUID();
+    const fetched = await supabase.from("settings").select("id,data").eq("id", "main").maybeSingle();
+    if (fetched.error) throw fetched.error;
+    if (fetched.data) {
+      const current = normalizeSettings(fetched.data.data);
+      const merged = mergeSettingsChanges(current, normalized, options.expected || current, options.changedKeys || Object.keys(normalized).filter((k) => k !== "updatedAt"));
+      normalized = normalizeSettings({ ...merged, updatedAt: new Date().toISOString(), _revision: crypto.randomUUID() });
+      // Compare-and-set a unique revision (timestamp fallback for the original records).
+      let query = supabase.from("settings").update({ data: normalized }).eq("id", "main");
+      query = fetched.data.data?._revision
+        ? query.eq("data->>_revision", fetched.data.data._revision)
+        : fetched.data.data?.updatedAt == null
+          ? query.is("data->>updatedAt", null)
+          : query.eq("data->>updatedAt", fetched.data.data.updatedAt);
+      const saved = await query.select("id");
+      if (saved.error) throw saved.error;
+      if (!saved.data?.length) throw new Error("Ustawienia zmieniły się podczas zapisu. Odśwież stronę — nie nadpisano danych.");
+    } else {
+      const saved = await supabase.from("settings").insert({ id: "main", data: normalized });
+      if (saved.error) throw saved.error;
+    }
   }
-
+  // Confirmed server writes are the source of truth, not an optimistic browser cache.
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized)); } catch (error) { console.warn("settings cache unavailable", error); }
+  if (setSettingsCallback) setSettingsCallback(normalized);
   return normalized;
 }
 
@@ -1030,20 +1013,9 @@ const emptyTool = {
 const statusOptions = ["Wszystkie", "Dostępne", "Wydane", "Do przeglądu", "Awaria", "Uszkodzone", "Zgubione"];
 const inspectionTypes = ["DGUV/VDE", "Kalibracja", "Serwis mechaniczny", "Przegląd producenta", "Przegląd UDT", "Ubezpieczenie", "Naprawa / Serwis", "Naprawa", "Serwis", "Inny"]; 
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addMonths(date, months) {
-  const d = new Date(date || today());
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0, 10);
-}
-
-function daysUntil(date) {
-  if (!date) return 99999;
-  return Math.ceil((new Date(date).getTime() - new Date().getTime()) / 86400000);
-}
+function today() { return fleetToday(); }
+function addMonths(date, months) { return addCalendarMonths(date || today(), months); }
+function daysUntil(date) { return date ? dateDays(date) : 99999; }
 
 function load(key, fallback) {
   try {
@@ -1264,29 +1236,24 @@ function inspections(tool) {
   return normalizeInspectionsList(tool?.inspections);
 }
 
-function isNoInspectionRequired(item) {
-  return !!item?.noInspectionRequired || item?.type === "Nie wymaga przeglądu" || item?.type === "No inspection required" || item?.type === "Keine Prüfung erforderlich";
-}
-
-function isServiceRecord(item) {
-  if (isNoInspectionRequired(item)) return false;
-  return item?.kind === "service" || ["Naprawa / Serwis", "Naprawa", "Serwis"].includes(item?.type) || (!item?.nextDate && item?.doneDate);
-}
-
+function isNoInspectionRequired(item) { return legacyNoInspection(item); }
+function isServiceRecord(item) { return legacyService(item); }
+function currentInspections(tool) { return latestLegacyInspections(inspections(tool)); }
 function hasPermanentInspectionOk(tool) {
-  return inspections(tool).some((item) => isNoInspectionRequired(item));
+  return !currentInspections(tool).length && inspections(tool).some(isNoInspectionRequired);
 }
-
 function urgentInspection(tool) {
-  const list = inspections(tool).filter((item) => !isServiceRecord(item) && !isNoInspectionRequired(item) && item.nextDate);
-  if (!list.length) return null;
-  return [...list].sort((a, b) => daysUntil(a.nextDate) - daysUntil(b.nextDate))[0];
+  const list = currentInspections(tool);
+  return [...list].sort((a, b) => {
+    const rank = (i) => negativeLegacyInspection(i) ? -1000000 : !i.nextDate ? -999999 : daysUntil(i.nextDate);
+    return rank(a) - rank(b);
+  })[0] || null;
 }
-
 function inspectionStatus(tool, T = I18N.pl) {
   if (hasPermanentInspectionOk(tool)) return { danger: false, label: T.inspectionsOkPermanent || "Przeglądy OK — bezterminowo", cls: "bg-green-100 text-green-700 border-green-200" };
   const item = urgentInspection(tool);
   if (!item) return { danger: true, label: T.noReview, cls: "bg-red-100 text-red-700 border-red-200" };
+  if (negativeLegacyInspection(item) || !item.nextDate) return { danger: true, label: `${item.type}: ${T.inspectionNeedsAction || "Przegląd wymaga reakcji"}`, cls: "bg-red-100 text-red-700 border-red-200" };
   const d = daysUntil(item.nextDate);
   if (d < 0) return { danger: true, label: `${item.type} ${T.overdue}`, cls: "bg-red-100 text-red-700 border-red-200" };
   if (d <= 30) return { danger: true, label: `${item.type} ${T.inDays} ${d} ${T.days}`, cls: "bg-red-100 text-red-700 border-red-200" };
@@ -1368,6 +1335,9 @@ export default function App() {
   const [showToolForm, setShowToolForm] = useState(false);
   const [toolForm, setToolForm] = useState(emptyTool);
   const [editing, setEditing] = useState(false);
+  const [toolSaving, setToolSaving] = useState(false);
+  const toolSaveLock = useRef(false);
+  const ppeSaveLock = useRef(false);
   const [showInspection, setShowInspection] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDayReport, setShowDayReport] = useState(false);
@@ -1398,6 +1368,7 @@ export default function App() {
     const publicTool = params.get("publicTool");
     const publicPpe = params.get("publicPpe");
     const transfer = params.get("transfer");
+    setActiveModule(params.get("module") === "ppe" ? "ppe" : "tools");
 
     setUser(u);
     setLang(storedLang);
@@ -1433,6 +1404,7 @@ export default function App() {
         mobile ? Promise.resolve({ data: [], error: null }) : supabase.from("history").select("id,data").limit(250),
       ]);
 
+      for (const result of [toolsRes, settingsRes, historyRes]) if (result.error) throw result.error;
       let loadedTools = (toolsRes.data || []).map((row) => row.data).filter(Boolean).map((tool) => ({
         ...tool,
         inspections: normalizeInspectionsList(tool.inspections),
@@ -1442,15 +1414,10 @@ export default function App() {
         .map((row) => ({ id: row.id, ...(row.data || {}) }))
         .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
-      const pickedSettings = pickBestSettings(localSettings, serverSettings);
-      let loadedSettings = pickedSettings.settings;
+      // Opening a page must never push old cached PPE/settings into the shared database.
+      const loadedSettings = normalizeSettings(serverSettings || defaultSettings);
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(loadedSettings)); } catch (error) { console.warn("settings cache", error); }
 
-      if (pickedSettings.shouldPushLocal) {
-        const { error } = await supabase.from("settings").upsert({ id: "main", data: loadedSettings });
-        if (error) console.error("settings sync error", error);
-      }
-
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(loadedSettings));
 
       // Nie dodajemy automatycznie demo-narzędzi, gdy baza jest pusta.
       // Inaczej po usunięciu wszystkich narzędzi wracałyby po odświeżeniu.
@@ -1480,15 +1447,15 @@ export default function App() {
 
   useEffect(() => {
     if (!dbLoaded || isMobileDevice()) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tools)); } catch (error) { console.warn("local cache", error); }
   }, [tools, dbLoaded]);
   useEffect(() => {
     if (!dbLoaded || isMobileDevice()) return;
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (error) { console.warn("local cache", error); }
   }, [history, dbLoaded]);
   useEffect(() => {
     if (!dbLoaded) return;
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (error) { console.warn("local cache", error); }
   }, [settings, dbLoaded]);
   useEffect(() => localStorage.setItem(LANG_KEY, lang), [lang]);
 
@@ -1558,6 +1525,7 @@ export default function App() {
       toolName: tool.name || "",
       serial: tool.serial || "",
       date: new Date().toLocaleString("pl-PL"),
+      createdAt: new Date().toISOString(),
       user,
       action,
       details,
@@ -1568,14 +1536,7 @@ export default function App() {
       ...extra,
     };
 
-    setHistory((prev) => [item, ...prev.filter((h) => h.id !== item.id)]);
-
-    if (supabase) {
-      const { error } = await supabase.from("history").upsert({ id: item.id, data: item });
-      if (error) console.error("history save error", error);
-    }
-
-    return item;
+    return await saveHistoryItem(item);
   }
 
   async function saveHistoryItem(item) {
@@ -1587,14 +1548,19 @@ export default function App() {
       photosFromReceiver: item.photosFromReceiver || [],
     };
 
-    setHistory((prev) => [normalized, ...prev.filter((h) => h.id !== normalized.id)]);
-
-    if (supabase) {
-      const { error } = await supabase.from("history").upsert({ id: normalized.id, data: normalized });
-      if (error) console.error("history upsert error", error);
+    try {
+      if (supabase) {
+        const saved = await supabase.from("history").upsert({ id: normalized.id, data: normalized }).select("id");
+        if (saved.error) throw saved.error;
+        if (!saved.data?.length) throw new Error("Brak potwierdzenia zapisu historii.");
+      }
+      setHistory((prev) => [normalized, ...prev.filter((h) => h.id !== normalized.id)]);
+      return normalized;
+    } catch (error) {
+      console.error("history save error", error);
+      alert("Nie zapisano wpisu historii. Dane samego sprzętu mogły już zostać zapisane — sprawdź posiadacza i status, zanim ponowisz operację. Administrator powinien uzupełnić historię.\n" + (error?.message || error));
+      return null;
     }
-
-    return normalized;
   }
 
   function login(name, pin) {
@@ -1625,43 +1591,48 @@ export default function App() {
 
   async function saveTool() {
     if (!isAdmin) return alert(T.noPermission);
-    if (!toolForm.id || !toolForm.name) return alert(T.enterIdName);
-
-    const normalizedTool = {
-      ...toolForm,
-      inspections: normalizeInspectionsList(toolForm.inspections),
-    };
-
-    if (editing) setTools((prev) => prev.map((t) => (t.id === normalizedTool.id ? normalizedTool : t)));
-    else setTools((prev) => [normalizedTool, ...prev]);
-    setSelected(normalizedTool);
-    if (supabase) await supabase.from("tools").upsert({ id: normalizedTool.id, data: normalizedTool });
-    log(normalizedTool, editing ? T.edit : T.add, editing ? "Zmieniono dane" : "Dodano sprzęt");
-    setShowToolForm(false);
+    if (toolSaveLock.current) return;
+    if (!toolForm.id?.trim() || !toolForm.name?.trim()) return alert(T.enterIdName);
+    const normalizedTool = { ...toolForm, id: toolForm.id.trim(), name: toolForm.name.trim(), inspections: normalizeInspectionsList(toolForm.inspections) };
+    if (!editing && tools.some((t) => t.id === normalizedTool.id)) return alert("Takie ID sprzętu już istnieje. Wpisz inne ID.");
+    toolSaveLock.current = true; setToolSaving(true);
+    try {
+      if (supabase) {
+        const saved = editing
+          ? await supabase.from("tools").update({ data: normalizedTool }).eq("id", normalizedTool.id).select("id")
+          : await supabase.from("tools").insert({ id: normalizedTool.id, data: normalizedTool }).select("id");
+        if (saved.error) throw saved.error;
+        if (!saved.data?.length) throw new Error("Nie zapisano danych. Sprzęt usunięto albo konto nie ma dostępu.");
+      }
+      setTools((prev) => editing ? prev.map((t) => t.id === normalizedTool.id ? normalizedTool : t) : [normalizedTool, ...prev]);
+      setSelected(normalizedTool);
+      await log(normalizedTool, editing ? T.edit : T.add, editing ? "Zmieniono dane" : "Dodano sprzęt");
+      setShowToolForm(false);
+    } catch (error) { alert("Nie udało się zapisać sprzętu. Formularz pozostaje otwarty.\n" + (error?.message || error)); }
+    finally { toolSaveLock.current = false; setToolSaving(false); }
   }
 
   async function updateTool(tool, action, details, options = {}) {
-    const normalizedTool = {
-      ...tool,
-      inspections: normalizeInspectionsList(tool.inspections),
-    };
-
-    setTools((prev) => prev.map((t) => (t.id === normalizedTool.id ? normalizedTool : t)));
-    setSelected(normalizedTool);
-
-    if (supabase) {
-      const { error } = await supabase.from("tools").upsert({ id: normalizedTool.id, data: normalizedTool });
-      if (error) {
-        alert((T.savePhotoError || "Nie udało się zapisać danych w Supabase:") + " " + error.message + "\n\n" + (T.savePhotoErrorHint || "Spróbuj dodać mniej zdjęć albo mniejsze zdjęcia."));
-        console.error("tool save error", error);
-        return;
+    const normalizedTool = { ...tool, inspections: normalizeInspectionsList(tool.inspections) };
+    try {
+      if (supabase) {
+        const saved = await supabase.from("tools").update({ data: normalizedTool }).eq("id", normalizedTool.id).select("id");
+        if (saved.error) throw saved.error;
+        if (!saved.data?.length) throw new Error("Nie potwierdzono zapisu sprzętu.");
       }
+      setTools((prev) => prev.map((t) => t.id === normalizedTool.id ? normalizedTool : t));
+      setSelected(normalizedTool);
+      if (!options.skipHistory) await log(normalizedTool, action, details, options.historyExtra || {});
+      return true;
+    } catch (error) {
+      console.error("tool save error", error);
+      alert("Nie udało się zapisać zmiany sprzętu.\n" + (error?.message || error));
+      return false;
     }
-
-    if (!options.skipHistory) await log(normalizedTool, action, details, options.historyExtra || {});
   }
 
-  function addInspection(inspection) {
+
+  async function addInspection(inspection) {
     if (!isAdmin) return alert(T.noPermission);
     if (!selected) return;
 
@@ -1688,7 +1659,10 @@ export default function App() {
       inspections: [normalized, ...previousInspections.filter((entry) => entry.id !== normalized.id)],
     };
 
-    if (!isNoInspectionRequired(normalized) && !isServiceRecord(normalized) && inspectionStatus(updated, T).danger && updated.status !== "Uszkodzone") updated.status = "Do przeglądu";
+    if (!isServiceRecord(normalized) && ["Dostępne", "Wydane", "Do przeglądu"].includes(updated.status)) {
+      if (inspectionStatus(updated, T).danger) updated.status = "Do przeglądu";
+      else if (updated.status === "Do przeglądu") updated.status = updated.assignedTo ? "Wydane" : "Dostępne";
+    } // A new inspection must never silently clear Awaria/Uszkodzone/Zgubione.
 
     const details = isNoInspectionRequired(normalized)
       ? `${T.noInspectionRequired || "Nie wymaga przeglądu"}: ${T.inspectionsOkPermanent || "Przeglądy OK — bezterminowo"}`
@@ -1696,8 +1670,8 @@ export default function App() {
         ? `${normalized.type}: ${normalized.doneDate} — ${normalized.notes || T.noNextDateRequired}`
         : `${normalized.type}: ${normalized.doneDate} / ${normalized.nextDate}`;
 
-    updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details, { historyExtra: { attachments: normalized.attachments || [] } });
-    setShowInspection(false);
+    const saved = await updateTool(updated, isServiceRecord(normalized) ? T.serviceRecord : T.addInspection, details, { historyExtra: { attachments: normalized.attachments || [] } });
+    if (saved) setShowInspection(false);
   }
 
   function deleteInspection(inspectionId) {
@@ -1731,6 +1705,8 @@ export default function App() {
       to: "",
     });
 
+    if (!historyItem) return;
+
     const ticket = {
       id: crypto.randomUUID?.() || String(Date.now()),
       historyId: historyItem.id,
@@ -1757,7 +1733,8 @@ export default function App() {
     if (tool.assignedTo && tool.assignedTo !== ticket.from) return alert(`${T.cannotClaimCurrent} ${tool.assignedTo}`);
 
     const updated = { ...tool, status: "Wydane", assignedTo: user };
-    await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`, { skipHistory: true });
+    const saved = await updateTool(updated, T.claimTool, `${ticket.from} ➜ ${user}`, { skipHistory: true });
+    if (!saved) return;
 
     let baseHistory = history.find((h) => h.id === ticket.historyId);
 
@@ -1793,6 +1770,8 @@ export default function App() {
       transferStatus: "claimed",
       claimedAt: new Date().toLocaleString("pl-PL"),
     });
+
+    if (!updatedHistory) { setShowClaim(false); setTransferCode(""); return; }
 
     setPhotoContext({ historyId: updatedHistory.id, historyItem: updatedHistory, mode: "receiver", tool: updated, title: T.receiverPhotoTitle });
     setShowPhotoModal(true);
@@ -1836,7 +1815,7 @@ export default function App() {
     setShowFailureModal(true);
   }
 
-  function submitFailureReport(report) {
+  async function submitFailureReport(report) {
     if (!selected) return;
     const currentTool = tools.find((t) => t.id === selected.id) || selected;
     const priority = report?.priority || "średni";
@@ -1852,13 +1831,13 @@ export default function App() {
       notes: currentTool.notes || "",
     };
 
-    updateTool(
+    const saved = await updateTool(
       updated,
       T.failureReported || "Zgłoszono awarię",
       `${T.failureReportedDetails || "Użytkownik zgłosił awarię urządzenia"}: ${user || "—"}${priority ? ` • ${T.failurePriority || "Priorytet"}: ${priority}` : ""}${note ? ` • ${note}` : ""}`,
       { historyExtra: { attachments, priority, failureNote: note } }
     );
-    setShowFailureModal(false);
+    if (saved) setShowFailureModal(false);
   }
 
 
@@ -1895,26 +1874,23 @@ export default function App() {
   }
 
   async function savePpeRecords(nextRecords) {
-    const nextSettings = { ...settings, ppeRecords: nextRecords, updatedAt: new Date().toISOString() };
+    if (ppeSaveLock.current) return false;
+    ppeSaveLock.current = true;
     try {
-      await persistSettingsEverywhere(nextSettings, setSettings);
-    } catch (e) {
-      alert((T.ppeSaveError || "Nie udało się zapisać PPE:") + " " + (e?.message || e));
-    }
+      const nextSettings = { ...settings, ppeRecords: nextRecords, updatedAt: new Date().toISOString() };
+      await persistSettingsEverywhere(nextSettings, setSettings, { expected: settings, changedKeys: ["ppeRecords"] });
+      return true;
+    } catch (error) { alert((T.ppeSaveError || "Nie udało się zapisać PPE:") + " " + (error?.message || error)); return false; }
+    finally { ppeSaveLock.current = false; }
+  }
+  async function upsertPpeRecord(record) {
+    if (!isAdmin) { alert(T.noPermission); return false; }
+    if (!record.person || !record.type || !record.name?.trim()) { alert("Wypełnij osobę, rodzaj i nazwę PPE."); return false; }
+    const normalized = { ...record, id: record.id || `PPE-${crypto.randomUUID()}`,
+      history: [{ date: new Date().toLocaleString("pl-PL"), createdAt: new Date().toISOString(), user, action: record.id ? (T.edit || "Edytuj") : (T.add || "Dodaj") }, ...(Array.isArray(record.history) ? record.history : [])] };
+    return await savePpeRecords([normalized, ...ppeRecords.filter((p) => p.id !== normalized.id)]);
   }
 
-  function upsertPpeRecord(record) {
-    const normalized = {
-      ...record,
-      id: record.id || `PPE-${String(Date.now())}`,
-      history: [
-        { date: new Date().toLocaleString("pl-PL"), user, action: record.id ? (T.edit || "Edytuj") : (T.add || "Dodaj") },
-        ...(Array.isArray(record.history) ? record.history : []),
-      ],
-    };
-    const next = [normalized, ...ppeRecords.filter((p) => p.id !== normalized.id)];
-    savePpeRecords(next);
-  }
 
   function deletePpeRecord(id) {
     if (!isAdmin) return alert(T.noPermission);
@@ -1996,8 +1972,10 @@ export default function App() {
     const w = window.open("", "_blank", "width=360,height=220");
     if (!w) return alert("Nie udało się otworzyć okna drukowania. Sprawdź blokadę popupów.");
     w.document.open();
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
 
@@ -2083,8 +2061,10 @@ export default function App() {
     const w = window.open("", "_blank", "width=900,height=900");
     if (!w) return alert("Nie udało się otworzyć okna wydruku. Sprawdź blokadę popupów.");
     w.document.open();
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
   async function loadHistoryFromDb({ force = false } = {}) {
@@ -2206,8 +2186,10 @@ export default function App() {
 
     const html = `<html><head><meta charset="UTF-8"><title>${title}</title></head><body style="font-family:Arial;margin:24px;color:#111"><h1 style="margin:0 0 4px 0">${title}</h1><p style="margin:0 0 18px 0;color:#666">${T.printGenerated}: ${new Date().toLocaleString("pl-PL")}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.date}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.equipment}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">ID / Serial</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.action}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.from}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.to}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.details}</th><th style="border:1px solid #111;background:#111;color:#fff;padding:8px;text-align:left">${T.photos}</th></tr></thead><tbody>${rows.map((r) => `<tr><td style="border:1px solid #ccc;padding:7px">${r.date}</td><td style="border:1px solid #ccc;padding:7px"><b>${r.toolName}</b></td><td style="border:1px solid #ccc;padding:7px">${r.toolId}<br/>SN: ${r.serial}</td><td style="border:1px solid #ccc;padding:7px">${historyActionText(r.action, T)}</td><td style="border:1px solid #ccc;padding:7px">${r.from || "—"}</td><td style="border:1px solid #ccc;padding:7px">${r.to || "—"}</td><td style="border:1px solid #ccc;padding:7px">${historyDetailsText(r.details, T)}</td><td style="border:1px solid #ccc;padding:7px">${r.photos}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
   function exportExcel() {
@@ -2227,8 +2209,7 @@ export default function App() {
       };
     });
     const headers = Object.keys(rows[0] || { ID: "" });
-    const html = `<html><meta charset="UTF-8"><body><h2>ACC Bau Narzędziownia</h2><table style="border-collapse:collapse;font-family:Arial;font-size:12px"><tr>${headers.map((h) => `<th style="border:1px solid #333;background:#111;color:#fff;padding:8px">${h}</th>`).join("")}</tr>${rows.map((r) => `<tr>${headers.map((h) => `<td style="border:1px solid #ccc;padding:6px">${r[h] || ""}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
-    download(html, "acc-bau-tools.xls", "application/vnd.ms-excel");
+    download(csv([headers, ...rows.map((row) => headers.map((key) => row[key] ?? ""))]), "acc-bau-tools.csv", "text/csv;charset=utf-8");
   }
 
   function download(content, name, type) {
@@ -2251,8 +2232,10 @@ export default function App() {
     const html = `<html><head><meta charset="UTF-8"><title>Karta urządzenia ${tool.id}</title><style>body{font-family:Arial;margin:24px;color:#111}h1{margin:0 0 6px}h2{margin-top:22px;border-bottom:2px solid #111;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px}td,th{border:1px solid #ccc;padding:7px;text-align:left;vertical-align:top}th{background:#111;color:#fff}.box{border:2px solid #111;border-radius:14px;padding:14px;margin:14px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.muted{color:#666}.badge{display:inline-block;border:1px solid #111;border-radius:999px;padding:4px 10px;font-weight:bold}</style></head><body><h1>ACC BAU • Karta urządzenia</h1><div class="muted">Wygenerowano: ${new Date().toLocaleString("pl-PL")}</div><div class="box"><div class="grid"><div><b>Nazwa:</b> ${tool.name || "—"}<br/><b>ID:</b> ${tool.id || "—"}<br/><b>SN:</b> ${tool.serial || "—"}<br/><b>Marka/model:</b> ${tool.brand || ""} ${tool.model || ""}</div><div><b>Status:</b> <span class="badge">${tool.status || "—"}</span><br/><b>Projekt:</b> ${tool.project || "—"}<br/><b>Lokalizacja:</b> ${tool.location || "—"}<br/><b>Posiadacz:</b> ${tool.assignedTo || T.warehouse}</div></div><p><b>Uwagi:</b> ${tool.notes || "—"}</p></div><h2>Przeglądy / serwis / naprawy</h2><div class="muted">Suma kosztów wpisów: <b>${totalCost ? totalCost.toFixed(2) : "0.00"}</b></div><table><thead><tr><th>Typ</th><th>Data</th><th>Następny</th><th>Wynik</th><th>Koszt</th><th>Opis</th></tr></thead><tbody>${inspRows || "<tr><td colspan='6'>Brak wpisów</td></tr>"}</tbody></table><h2>Historia</h2><table><thead><tr><th>Data</th><th>Akcja</th><th>Szczegóły</th><th>Od</th><th>Do</th></tr></thead><tbody>${rows || "<tr><td colspan='5'>Brak historii</td></tr>"}</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`;
     const w = window.open("", "_blank");
     if (!w) return alert("Nie udało się otworzyć okna wydruku.");
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
   function printLabel(tool) {
@@ -2438,8 +2421,10 @@ export default function App() {
     const w = window.open("", "_blank", "width=420,height=320");
     if (!w) return alert("Nie udało się otworzyć okna drukowania. Sprawdź blokadę popupów.");
     w.document.open();
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
   if (publicPpeId) {
@@ -2517,17 +2502,15 @@ export default function App() {
                 if (!isAdmin) return alert(T.noPermission);
                 if (!confirm(`Usunąć narzędzie: ${selected.name}?`)) return;
                 const deletedId = selected.id;
-                const nextTools = tools.filter((t) => t.id !== deletedId);
-                setTools(nextTools);
-                setSelected(nextTools[0] || null);
-                if (supabase) {
-                  const { error } = await supabase.from("tools").delete().eq("id", deletedId);
-                  if (error) {
-                    alert("Nie udało się usunąć z Supabase: " + error.message);
-                    await initApp();
-                    return;
+                try {
+                  if (supabase) {
+                    const saved = await supabase.from("tools").delete().eq("id", deletedId).select("id");
+                    if (saved.error) throw saved.error;
+                    if (!saved.data?.length) throw new Error("Nie potwierdzono usunięcia w bazie.");
                   }
-                }
+                  const nextTools = tools.filter((t) => t.id !== deletedId);
+                  setTools(nextTools); setSelected(nextTools[0] || null);
+                } catch (error) { alert("Nie udało się usunąć sprzętu: " + (error?.message || error)); }
               }} onTransfer={createTransfer} onReturn={returnTool} onReportFailure={reportFailure} onQrIssue={toggleQrIssue} onInspection={() => setShowInspection(true)} onDeleteInspection={deleteInspection} onPrint={() => printLabel(selected)} onPrintCard={() => printToolCard(selected)} onPrintHistory={() => printHistory(history.filter((h) => h.toolId === selected.id), `Historia narzędzia - ${selected.name}`)} onOpenHistory={(item) => setSelectedHistory(item)} />}
             <InfoBox T={T} />
           </aside>
@@ -2536,7 +2519,7 @@ export default function App() {
         )}
       </main>
 
-      {showToolForm && <ToolForm T={T} form={toolForm} setForm={setToolForm} settings={settings} onClose={() => setShowToolForm(false)} onSave={saveTool} editing={editing} />}
+      {showToolForm && <ToolForm T={T} form={toolForm} setForm={setToolForm} settings={settings} onClose={() => setShowToolForm(false)} onSave={saveTool} editing={editing} saving={toolSaving} />}
       {showInspection && selected && <InspectionModal T={T} onClose={() => setShowInspection(false)} onSave={addInspection} />}
       {showSettings && <SettingsModal T={T} settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} onOptimizeDatabase={optimizeExistingDatabase} />}
       {showDayReport && <DayReportModal T={T} history={history} tools={tools} onClose={() => setShowDayReport(false)} />}
@@ -2611,6 +2594,8 @@ function Header({ T, lang, setLang, user, role, isAdmin, activeModule, onTools, 
             <ShieldCheck className="mr-2 h-4 w-4" /> {T.ppe || "PPE"}
           </Button>
 
+          <a href="/vehicles" className="inline-flex items-center rounded-xl bg-zinc-800 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700"><Car className="mr-2 h-4 w-4" /> {lang === "de" ? "Fahrzeuge" : lang === "en" ? "Vehicles" : "Pojazdy"}</a>
+
           <Button onClick={onClaim} className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600">
             <ScanLine className="mr-2 h-4 w-4" /> {T.takeover}
           </Button>
@@ -2650,7 +2635,7 @@ function Header({ T, lang, setLang, user, role, isAdmin, activeModule, onTools, 
 function LoginScreen({ settings, T, lang, setLang, onLogin }) {
   const [name, setName] = useState(settings.people[0] || "");
   const [pin, setPin] = useState("");
-  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.24),transparent_35%),linear-gradient(135deg,#2f302d,#575951)] p-4 text-white"><div className="mx-auto flex min-h-[80vh] max-w-4xl items-center justify-center"><Card className="grid w-full overflow-hidden rounded-[32px] border border-white/10 shadow-2xl lg:grid-cols-2"><div className="bg-zinc-950 p-8 text-white"><LogoMark /><h1 className="text-4xl font-black">{T.appTitle}</h1><p className="mt-4 text-zinc-300">{T.loginText}</p><div className="mt-6"><LanguageSelect lang={lang} setLang={setLang} dark /></div></div><CardContent className="p-8 text-zinc-950"><div className="mb-5 flex items-center gap-2 text-xl font-black"><Lock className="h-5 w-5" /> {T.login}</div><select value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border px-4 py-3">{settings.people.map((p) => <option key={p}>{p}</option>)}</select><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" className="mt-4 w-full rounded-2xl border px-4 py-3" /><Button onClick={() => onLogin(name, pin)} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base hover:bg-zinc-800">{T.enter}</Button><p className="mt-4 text-xs text-zinc-400">{T.demoPin}</p></CardContent></Card></div></div>;
+  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,106,0,0.24),transparent_35%),linear-gradient(135deg,#2f302d,#575951)] p-4 text-white"><div className="mx-auto flex min-h-[80vh] max-w-4xl items-center justify-center"><Card className="grid w-full overflow-hidden rounded-[32px] border border-white/10 shadow-2xl lg:grid-cols-2"><div className="bg-zinc-950 p-8 text-white"><LogoMark /><h1 className="text-4xl font-black">{T.appTitle}</h1><p className="mt-4 text-zinc-300">{T.loginText}</p><div className="mt-6"><LanguageSelect lang={lang} setLang={setLang} dark /></div></div><CardContent className="p-8 text-zinc-950"><div className="mb-5 flex items-center gap-2 text-xl font-black"><Lock className="h-5 w-5" /> {T.login}</div><select value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border px-4 py-3">{settings.people.map((p) => <option key={p}>{p}</option>)}</select><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" className="mt-4 w-full rounded-2xl border px-4 py-3" /><Button onClick={() => onLogin(name, pin)} className="mt-5 w-full rounded-2xl bg-zinc-950 py-6 text-base hover:bg-zinc-800">{T.enter}</Button><a href="/vehicles" className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-orange-300 p-3 font-bold text-orange-700"><Car className="h-5 w-5" /> {lang === "de" ? "Fahrzeuge" : lang === "en" ? "Vehicles" : "Pojazdy"}</a></CardContent></Card></div></div>;
 }
 
 function PublicToolView({ tool, T, lang, setLang, onBack }) {
@@ -3021,7 +3006,7 @@ function InspectionCard({ inspection, T, isAdmin = false, onDelete }) {
   );
 }
 
-function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
+function ToolForm({ T, form, setForm, settings, onClose, onSave, editing, saving }) {
   async function handlePhoto(file) {
     if (!file) return;
 
@@ -3034,7 +3019,7 @@ function ToolForm({ T, form, setForm, settings, onClose, onSave, editing }) {
     }
   }
 
-  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label={T.name} value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label={T.brand} value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label={T.model} value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.toolPhoto}</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img loading="lazy" decoding="async" src={form.photo} alt={T.preview} className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>{T.removePhoto}</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} /></Modal>;
+  return <Modal><ModalHeader title={editing ? T.edit : T.add} onClose={onClose} /><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="ID" disabled={editing || saving} value={form.id} onChange={(v) => setForm({ ...form, id: v })} /><Field label={T.name} value={form.name} onChange={(v) => setForm({ ...form, name: v })} /><FormSelect label={T.category} value={form.category} options={settings.categories} onChange={(v) => setForm({ ...form, category: v })} /><FormSelect label={T.status} value={form.status} options={statusOptions.filter((s) => s !== "Wszystkie")} onChange={(v) => setForm({ ...form, status: v })} /><Field label={T.brand} value={form.brand} onChange={(v) => setForm({ ...form, brand: v })} /><Field label={T.model} value={form.model} onChange={(v) => setForm({ ...form, model: v })} /><Field label={T.serial} value={form.serial} onChange={(v) => setForm({ ...form, serial: v })} /><FormSelect label={T.project} value={form.project} options={settings.projects} onChange={(v) => setForm({ ...form, project: v })} /><Field label={T.location} value={form.location} onChange={(v) => setForm({ ...form, location: v })} /><FormSelect label={T.assignedTo} value={form.assignedTo} options={["", ...settings.people]} onChange={(v) => setForm({ ...form, assignedTo: v })} /><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.toolPhoto}</span><input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} className="w-full rounded-xl border px-3 py-2 text-sm" />{form.photo && <div className="mt-3 flex items-center gap-3"><img loading="lazy" decoding="async" src={form.photo} alt={T.preview} className="h-24 w-24 rounded-2xl border object-cover" /><Button type="button" variant="outline" onClick={() => setForm({ ...form, photo: "" })}>{T.removePhoto}</Button></div>}</label><label className="block md:col-span-2"><span className="mb-1 block text-xs font-bold text-zinc-500">{T.notes}</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="min-h-24 w-full rounded-xl border px-3 py-2" /></label></div><ModalFooter T={T} onClose={onClose} onSave={onSave} saving={saving} /></Modal>;
 }
 
 function InspectionModal({ T, onClose, onSave }) {
@@ -3243,8 +3228,10 @@ function DayReportModal({ T, history, tools, onClose }) {
   function print() {
     const html = `<html><head><meta charset="UTF-8"><title>${T.dayReport || "Raport dnia"}</title><style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #ccc;padding:7px}th{background:#111;color:#fff}</style></head><body><h1>ACC BAU • ${T.dayReport || "Raport dnia"}</h1><p>${new Date().toLocaleString("pl-PL")}</p><p>${T.failures || "Awarie"}: <b>${failures.length}</b> • ${T.transfers || "Przekazania"}: <b>${transfers.length}</b> • ${T.servicesInspections || "Serwis/przeglądy"}: <b>${services.length}</b></p><table><thead><tr><th>${T.date}</th><th>${T.equipment}</th><th>${T.action}</th><th>${T.details}</th><th>${T.from}</th><th>${T.to}</th></tr></thead><tbody>${rows.map((h)=>`<tr><td>${h.date||""}</td><td>${h.toolName||h.toolId||""}</td><td>${historyActionText(h.action,T)}</td><td>${historyDetailsText(h.details,T)}</td><td>${h.from||"—"}</td><td>${h.to||"—"}</td></tr>`).join("")}</tbody></table><script>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
-    w.document.write(html);
+    w.document.write(legacyPrintDocument(html));
     w.document.close();
+    w.opener = null;
+    setTimeout(() => { if (!w.closed) w.print(); }, 600);
   }
 
   return (
@@ -3356,6 +3343,7 @@ function SettingsModal({ T, settings, setSettings, onClose, onOptimizeDatabase }
       });
 
       const nextSettings = normalizeSettings({
+        ...settings,
         people: clean(people),
         projects: clean(projects),
         categories: clean(categories),
@@ -3364,11 +3352,11 @@ function SettingsModal({ T, settings, setSettings, onClose, onOptimizeDatabase }
         updatedAt: new Date().toISOString(),
       });
 
-      await persistSettingsEverywhere(nextSettings, setSettings);
+      await persistSettingsEverywhere(nextSettings, setSettings, { expected: settings, changedKeys: ["people", "projects", "categories", "pins", "roles"] });
       onClose();
     } catch (e) {
       console.error("settings save error", e);
-      alert("Nie udało się zapisać ustawień w Supabase: " + (e?.message || e) + "\n\nUstawienia zapisano lokalnie, ale sprawdź tabelę settings / RLS w Supabase.");
+      alert("Nie udało się zapisać ustawień w Supabase: " + (e?.message || e) + "\n\nNie potwierdzono zapisu. Formularz pozostaje otwarty; nie zatwierdzono zmiany w aplikacji.");
     } finally {
       setSaving(false);
     }
@@ -3943,10 +3931,10 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
           types={ppeTypes}
           statuses={ppeStatuses}
           onClose={() => setEditing(null)}
-          onSave={() => {
+          onSave={async () => {
             const finalType = isPpeOtherValue(editing.type, T) && editing.customType ? editing.customType : editing.type;
-            onSave({ ...editing, type: finalType, customType: "" });
-            setEditing(null);
+            const saved = await onSave({ ...editing, type: finalType, customType: "" });
+            if (saved) setEditing(null);
           }}
         />
       )}
@@ -3955,12 +3943,14 @@ function PpePage({ T, isAdmin, settings, records, onSave, onDelete, onPrintQr, o
 }
 
 function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
+  async function save() { if (saving) return; setSaving(true); try { await onSave(); } finally { setSaving(false); } }
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   return (
     <Modal onClose={onClose} wide>
       <div className="mb-4 flex items-center justify-between border-b px-1 pb-4">
         <h3 className="text-xl font-black">{form.id ? (T.editPpe || "Edytuj PPE") : (T.addPpe || "Dodaj PPE")}</h3>
-        <Button onClick={onClose} variant="outline" className="rounded-xl"><X className="h-4 w-4" /></Button>
+        <Button onClick={onClose} disabled={saving} variant="outline" className="rounded-xl"><X className="h-4 w-4" /></Button>
       </div>
 
       <p className="mb-4 rounded-2xl bg-orange-50 p-3 text-sm font-bold text-orange-800">{T.ppeFormHint || "Wypełnij dane wydanego środka ochrony. Istniejące PPE i historia nie są usuwane."}</p>
@@ -3985,8 +3975,8 @@ function PpeFormModal({ T, form, setForm, people, types, statuses, onClose, onSa
       </label>
 
       <div className="mt-5 flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose} className="rounded-xl">{T.cancel}</Button>
-        <Button onClick={onSave} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500"><Save className="mr-2 h-4 w-4" /> {T.save}</Button>
+        <Button variant="outline" onClick={onClose} disabled={saving} className="rounded-xl">{T.cancel}</Button>
+        <Button onClick={save} disabled={saving} className="rounded-xl bg-orange-600 text-white hover:bg-orange-500"><Save className="mr-2 h-4 w-4" /> {T.save}</Button>
       </div>
     </Modal>
   );
@@ -4042,6 +4032,6 @@ function PublicPpeView({ ppe, T, lang, setLang, onBack }) {
 function StatCard({ icon, label, value, danger }) { return <Card className="rounded-[28px] border border-white/30 bg-white/95 shadow-xl"><CardContent className="flex items-center gap-4 p-5"><div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${danger ? "bg-red-100 text-red-700" : "bg-zinc-100 text-zinc-900"}`}>{React.cloneElement(icon, { className: "h-6 w-6" })}</div><div><p className="text-sm text-zinc-500">{label}</p><p className="text-2xl font-black">{value}</p></div></CardContent></Card>; }
 function Select({ label, value, setValue, options }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><select value={value} onChange={(e) => setValue(e.target.value)} className="w-full rounded-xl border bg-white px-3 py-2 text-sm">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
 function FormSelect({ label, value, options, onChange }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2">{options.map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select></label>; }
-function Field({ label, value, onChange, type = "text" }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2" /></label>; }
+function Field({ label, value, onChange, type = "text", disabled = false }) { return <label><span className="mb-1 block text-xs font-bold text-zinc-500">{label}</span><input type={type} disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border px-3 py-2" /></label>; }
 function Info({ label, value }) { return <div className="rounded-2xl border bg-zinc-50 px-3 py-2"><p className="text-xs text-zinc-500">{label}</p><p className="whitespace-pre-line font-semibold text-zinc-900">{value}</p></div>; }
 function Badge({ children, cls }) { return <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${cls}`}>{children}</span>; }

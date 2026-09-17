@@ -1,0 +1,644 @@
+
+> acc-bau-tools@0.2.0 test
+> node scripts/run-tests.cjs
+
+TAP version 13
+# Subtest: Berlin date: UTC evening is next day in summer
+ok 1 - Berlin date: UTC evening is next day in summer
+  ---
+  duration_ms: 16.748362
+  type: 'test'
+  ...
+# Subtest: Berlin date: winter offset
+ok 2 - Berlin date: winter offset
+  ---
+  duration_ms: 0.274303
+  type: 'test'
+  ...
+# Subtest: January 31 plus month clamps February
+ok 3 - January 31 plus month clamps February
+  ---
+  duration_ms: 0.422217
+  type: 'test'
+  ...
+# Subtest: Leap year February
+ok 4 - Leap year February
+  ---
+  duration_ms: 0.144127
+  type: 'test'
+  ...
+# Subtest: Leap day plus year
+ok 5 - Leap day plus year
+  ---
+  duration_ms: 0.159471
+  type: 'test'
+  ...
+# Subtest: Date days unaffected by DST
+ok 6 - Date days unaffected by DST
+  ---
+  duration_ms: 0.093321
+  type: 'test'
+  ...
+# Subtest: Blank schedule means missing, not OK
+ok 7 - Blank schedule means missing, not OK
+  ---
+  duration_ms: 0.522919
+  type: 'test'
+  ...
+# Subtest: Date reached today is due
+ok 8 - Date reached today is due
+  ---
+  duration_ms: 0.156496
+  type: 'test'
+  ...
+# Subtest: Kilometres reached override distant date
+ok 9 - Kilometres reached override distant date
+  ---
+  duration_ms: 0.344239
+  type: 'test'
+  ...
+# Subtest: Hours reached override date and kilometres
+ok 10 - Hours reached override date and kilometres
+  ---
+  duration_ms: 1.424688
+  type: 'test'
+  ...
+# Subtest: Warning distance
+ok 11 - Warning distance
+  ---
+  duration_ms: 1.193419
+  type: 'test'
+  ...
+# Subtest: Healthy schedule
+ok 12 - Healthy schedule
+  ---
+  duration_ms: 0.100651
+  type: 'test'
+  ...
+# Subtest: Missing mileage never treated as zero
+ok 13 - Missing mileage never treated as zero
+  ---
+  duration_ms: 0.081834
+  type: 'test'
+  ...
+# Subtest: Unknown mileage flagged even with distant date
+ok 14 - Unknown mileage flagged even with distant date
+  ---
+  duration_ms: 0.070326
+  type: 'test'
+  ...
+# Subtest: Due date still red with unknown mileage
+ok 15 - Due date still red with unknown mileage
+  ---
+  duration_ms: 0.077297
+  type: 'test'
+  ...
+# Subtest: Disabled task has explicit disabled state
+ok 16 - Disabled task has explicit disabled state
+  ---
+  duration_ms: 0.141453
+  type: 'test'
+  ...
+# Subtest: Old mileage is stale
+ok 17 - Old mileage is stale
+  ---
+  duration_ms: 0.104117
+  type: 'test'
+  ...
+# Subtest: Recent mileage is not stale
+ok 18 - Recent mileage is not stale
+  ---
+  duration_ms: 0.059009
+  type: 'test'
+  ...
+# Subtest: No meter means no stale alarm
+ok 19 - No meter means no stale alarm
+  ---
+  duration_ms: 0.10644
+  type: 'test'
+  ...
+# Subtest: Both meters need dates
+ok 20 - Both meters need dates
+  ---
+  duration_ms: 0.064207
+  type: 'test'
+  ...
+# Subtest: No plans yields configuration warning
+ok 21 - No plans yields configuration warning
+  ---
+  duration_ms: 0.107562
+  type: 'test'
+  ...
+# Subtest: Default plans are independent, no invented intervals
+ok 22 - Default plans are independent, no invented intervals
+  ---
+  duration_ms: 0.23214
+  type: 'test'
+  ...
+# Subtest: Cost totals keep currencies separate
+ok 23 - Cost totals keep currencies separate
+  ---
+  duration_ms: 0.83561
+  type: 'test'
+  ...
+# Subtest: Money uses integer cents and excludes voided
+ok 24 - Money uses integer cents and excludes voided
+  ---
+  duration_ms: 0.11923
+  type: 'test'
+  ...
+# Subtest: CSV protects Excel formula injection
+ok 25 - CSV protects Excel formula injection
+  ---
+  duration_ms: 0.144287
+  type: 'test'
+  ...
+# Subtest: CSV escapes quotes and keeps newlines inside quoted cells
+ok 26 - CSV escapes quotes and keeps newlines inside quoted cells
+  ---
+  duration_ms: 0.106601
+  type: 'test'
+  ...
+# Subtest: CSV UTF-8 BOM for Excel
+ok 27 - CSV UTF-8 BOM for Excel
+  ---
+  duration_ms: 0.17218
+  type: 'test'
+  ...
+# Subtest: Recognizes PDF magic
+ok 28 - Recognizes PDF magic
+  ---
+  duration_ms: 0.144348
+  type: 'test'
+  ...
+# Subtest: Rejects HTML pretending to be PDF
+ok 29 - Rejects HTML pretending to be PDF
+  ---
+  duration_ms: 0.076546
+  type: 'test'
+  ...
+# Subtest: Recognizes PNG magic
+ok 30 - Recognizes PNG magic
+  ---
+  duration_ms: 0.297929
+  type: 'test'
+  ...
+# Subtest: Recognizes JPEG magic
+ok 31 - Recognizes JPEG magic
+  ---
+  duration_ms: 0.141343
+  type: 'test'
+  ...
+# Subtest: Recognizes WebP magic
+ok 32 - Recognizes WebP magic
+  ---
+  duration_ms: 0.33827
+  type: 'test'
+  ...
+# Subtest: Only administrator can create car
+ok 33 - Only administrator can create car
+  ---
+  duration_ms: 0.769761
+  type: 'test'
+  ...
+# Subtest: Create keeps 0 distinct from unknown
+ok 34 - Create keeps 0 distinct from unknown
+  ---
+  duration_ms: 0.831894
+  type: 'test'
+  ...
+# Subtest: Electric vehicle does not start with combustion filter schedules
+ok 35 - Electric vehicle does not start with combustion filter schedules
+  ---
+  duration_ms: 0.181514
+  type: 'test'
+  ...
+# Subtest: Inactive account rejected
+ok 36 - Inactive account rejected
+  ---
+  duration_ms: 0.134703
+  type: 'test'
+  ...
+# Subtest: Assigned worker can add mileage
+ok 37 - Assigned worker can add mileage
+  ---
+  duration_ms: 0.758714
+  type: 'test'
+  ...
+# Subtest: Unassigned worker cannot write
+ok 38 - Unassigned worker cannot write
+  ---
+  duration_ms: 0.109165
+  type: 'test'
+  ...
+# Subtest: Worker cannot service even assigned
+ok 39 - Worker cannot service even assigned
+  ---
+  duration_ms: 0.122966
+  type: 'test'
+  ...
+# Subtest: Worker cannot change role or assignment through command
+ok 40 - Worker cannot change role or assignment through command
+  ---
+  duration_ms: 0.419212
+  type: 'test'
+  ...
+# Subtest: Worker cannot correct counter
+ok 41 - Worker cannot correct counter
+  ---
+  duration_ms: 0.156155
+  type: 'test'
+  ...
+# Subtest: Expected version mismatch returns conflict
+ok 42 - Expected version mismatch returns conflict
+  ---
+  duration_ms: 0.184028
+  type: 'test'
+  ...
+# Subtest: Archived car rejects ordinary edits
+ok 43 - Archived car rejects ordinary edits
+  ---
+  duration_ms: 0.096375
+  type: 'test'
+  ...
+# Subtest: Admin can restore archived car
+ok 44 - Admin can restore archived car
+  ---
+  duration_ms: 0.144868
+  type: 'test'
+  ...
+# Subtest: Mileage cannot decrease without correction
+ok 45 - Mileage cannot decrease without correction
+  ---
+  duration_ms: 0.214904
+  type: 'test'
+  ...
+# Subtest: Future activity rejected
+ok 46 - Future activity rejected
+  ---
+  duration_ms: 0.158058
+  type: 'test'
+  ...
+# Subtest: Back-dated mileage does not replace current counter
+ok 47 - Back-dated mileage does not replace current counter
+  ---
+  duration_ms: 0.335115
+  type: 'test'
+  ...
+# Subtest: Back-dated reading above current rejected
+ok 48 - Back-dated reading above current rejected
+  ---
+  duration_ms: 0.205139
+  type: 'test'
+  ...
+# Subtest: Counter chronology considers earlier readings
+ok 49 - Counter chronology considers earlier readings
+  ---
+  duration_ms: 0.172139
+  type: 'test'
+  ...
+# Subtest: Counter chronology considers later readings
+ok 50 - Counter chronology considers later readings
+  ---
+  duration_ms: 0.156226
+  type: 'test'
+  ...
+# Subtest: Admin correction requires reason
+ok 51 - Admin correction requires reason
+  ---
+  duration_ms: 0.247002
+  type: 'test'
+  ...
+# Subtest: Admin correction may reset counter today
+ok 52 - Admin correction may reset counter today
+  ---
+  duration_ms: 0.165709
+  type: 'test'
+  ...
+# Subtest: Historical reading before correction is rejected
+ok 53 - Historical reading before correction is rejected
+  ---
+  duration_ms: 0.158198
+  type: 'test'
+  ...
+# Subtest: New segment ignores pre-correction high mileage
+ok 54 - New segment ignores pre-correction high mileage
+  ---
+  duration_ms: 0.166501
+  type: 'test'
+  ...
+# Subtest: Wrong meter type rejected
+ok 55 - Wrong meter type rejected
+  ---
+  duration_ms: 0.155024
+  type: 'test'
+  ...
+# Subtest: Hours update allows tenths
+ok 56 - Hours update allows tenths
+  ---
+  duration_ms: 0.21227
+  type: 'test'
+  ...
+# Subtest: Oil service updates only selected oil plan
+ok 57 - Oil service updates only selected oil plan
+  ---
+  duration_ms: 0.454576
+  type: 'test'
+  ...
+# Subtest: Unscheduled service never changes any task
+ok 58 - Unscheduled service never changes any task
+  ---
+  duration_ms: 0.270127
+  type: 'test'
+  ...
+# Subtest: Multiple tasks update independently in one visit
+ok 59 - Multiple tasks update independently in one visit
+  ---
+  duration_ms: 0.217668
+  type: 'test'
+  ...
+# Subtest: Manual next deadline overrides recurrence
+ok 60 - Manual next deadline overrides recurrence
+  ---
+  duration_ms: 0.150697
+  type: 'test'
+  ...
+# Subtest: No repeat does not silently reuse completed deadline
+ok 61 - No repeat does not silently reuse completed deadline
+  ---
+  duration_ms: 0.479533
+  type: 'test'
+  ...
+# Subtest: Cannot complete unknown task
+ok 62 - Cannot complete unknown task
+  ---
+  duration_ms: 0.221314
+  type: 'test'
+  ...
+# Subtest: Cannot complete disabled task
+ok 63 - Cannot complete disabled task
+  ---
+  duration_ms: 0.168454
+  type: 'test'
+  ...
+# Subtest: Km recurrence requires service mileage
+ok 64 - Km recurrence requires service mileage
+  ---
+  duration_ms: 0.200352
+  type: 'test'
+  ...
+# Subtest: Older service cannot close later completed task
+ok 65 - Older service cannot close later completed task
+  ---
+  duration_ms: 0.17209
+  type: 'test'
+  ...
+# Subtest: Next mileage must be greater than performed mileage
+ok 66 - Next mileage must be greater than performed mileage
+  ---
+  duration_ms: 0.252671
+  type: 'test'
+  ...
+# Subtest: Fuel event cannot complete technical inspection
+ok 67 - Fuel event cannot complete technical inspection
+  ---
+  duration_ms: 0.200533
+  type: 'test'
+  ...
+# Subtest: Duplicate task IDs rejected
+ok 68 - Duplicate task IDs rejected
+  ---
+  duration_ms: 0.147563
+  type: 'test'
+  ...
+# Subtest: Incompatible meter task rejected
+ok 69 - Incompatible meter task rejected
+  ---
+  duration_ms: 0.135014
+  type: 'test'
+  ...
+# Subtest: Meter mode cannot change silently
+ok 70 - Meter mode cannot change silently
+  ---
+  duration_ms: 0.283497
+  type: 'test'
+  ...
+# Subtest: Assignment gets driver name from verified membership
+ok 71 - Assignment gets driver name from verified membership
+  ---
+  duration_ms: 0.17866
+  type: 'test'
+  ...
+# Subtest: Unknown driver account rejected
+ok 72 - Unknown driver account rejected
+  ---
+  duration_ms: 0.921379
+  type: 'test'
+  ...
+# Subtest: Assignment requires actual counter
+ok 73 - Assignment requires actual counter
+  ---
+  duration_ms: 0.144668
+  type: 'test'
+  ...
+# Subtest: Assignment records previous and next users
+ok 74 - Assignment records previous and next users
+  ---
+  duration_ms: 0.121583
+  type: 'test'
+  ...
+# Subtest: External driver can be assigned without granting write account
+ok 75 - External driver can be assigned without granting write account
+  ---
+  duration_ms: 0.130617
+  type: 'test'
+  ...
+# Subtest: Critical defect takes vehicle out of service
+ok 76 - Critical defect takes vehicle out of service
+  ---
+  duration_ms: 0.137457
+  type: 'test'
+  ...
+# Subtest: Critical defect blocks assignment
+ok 77 - Critical defect blocks assignment
+  ---
+  duration_ms: 0.14605
+  type: 'test'
+  ...
+# Subtest: Disabled car can be returned
+ok 78 - Disabled car can be returned
+  ---
+  duration_ms: 0.114462
+  type: 'test'
+  ...
+# Subtest: Cannot enable car with unresolved critical defect
+ok 79 - Cannot enable car with unresolved critical defect
+  ---
+  duration_ms: 0.214474
+  type: 'test'
+  ...
+# Subtest: Resolving defect does not automatically enable car
+ok 80 - Resolving defect does not automatically enable car
+  ---
+  duration_ms: 0.165409
+  type: 'test'
+  ...
+# Subtest: Archive requires vehicle return
+ok 81 - Archive requires vehicle return
+  ---
+  duration_ms: 0.166792
+  type: 'test'
+  ...
+# Subtest: Cannot void assignment history
+ok 82 - Cannot void assignment history
+  ---
+  duration_ms: 0.190357
+  type: 'test'
+  ...
+# Subtest: Void preserves counter and produces audit record
+ok 83 - Void preserves counter and produces audit record
+  ---
+  duration_ms: 0.200863
+  type: 'test'
+  ...
+# Subtest: Already voided event rejected
+ok 84 - Already voided event rejected
+  ---
+  duration_ms: 0.169946
+  type: 'test'
+  ...
+# Subtest: Worker response strips financial fields and invoice links
+ok 85 - Worker response strips financial fields and invoice links
+  ---
+  duration_ms: 0.210177
+  type: 'test'
+  ...
+# Subtest: Worker cannot see admin vehicle notes
+ok 86 - Worker cannot see admin vehicle notes
+  ---
+  duration_ms: 0.083836
+  type: 'test'
+  ...
+# Subtest: Admin retains financial information but never receives hash
+ok 87 - Admin retains financial information but never receives hash
+  ---
+  duration_ms: 0.067813
+  type: 'test'
+  ...
+# Subtest: Domain engine never mutates the input car
+ok 88 - Domain engine never mutates the input car
+  ---
+  duration_ms: 0.267704
+  type: 'test'
+  ...
+# Subtest: Same command has stable operation hash
+ok 89 - Same command has stable operation hash
+  ---
+  duration_ms: 0.136346
+  type: 'test'
+  ...
+# Subtest: Legacy settings change keeps PPE and future fields
+ok 90 - Legacy settings change keeps PPE and future fields
+  ---
+  duration_ms: 0.29819
+  type: 'test'
+  ...
+# Subtest: Legacy PPE update preserves newer unrelated employee list
+ok 91 - Legacy PPE update preserves newer unrelated employee list
+  ---
+  duration_ms: 0.108022
+  type: 'test'
+  ...
+# Subtest: Legacy stale PPE write rejected instead of overwriting
+ok 92 - Legacy stale PPE write rejected instead of overwriting
+  ---
+  duration_ms: 0.171789
+  type: 'test'
+  ...
+# Subtest: Legacy comparison ignores JSON object key order
+ok 93 - Legacy comparison ignores JSON object key order
+  ---
+  duration_ms: 0.973588
+  type: 'test'
+  ...
+# Subtest: Missing old PPE array equals empty array
+ok 94 - Missing old PPE array equals empty array
+  ---
+  duration_ms: 0.087782
+  type: 'test'
+  ...
+# Subtest: Missing next inspection date is NOT a service
+ok 95 - Missing next inspection date is NOT a service
+  ---
+  duration_ms: 0.08621
+  type: 'test'
+  ...
+# Subtest: Explicit repair is a service
+ok 96 - Explicit repair is a service
+  ---
+  duration_ms: 0.363568
+  type: 'test'
+  ...
+# Subtest: Current DGUV supersedes old one but not calibration
+ok 97 - Current DGUV supersedes old one but not calibration
+  ---
+  duration_ms: 0.128845
+  type: 'test'
+  ...
+# Subtest: Legacy no-inspection marker does not suppress real inspections
+ok 98 - Legacy no-inspection marker does not suppress real inspections
+  ---
+  duration_ms: 0.128113
+  type: 'test'
+  ...
+# Subtest: Negative inspection recognized
+ok 99 - Negative inspection recognized
+  ---
+  duration_ms: 0.149225
+  type: 'test'
+  ...
+# Subtest: OK inspection is not negative
+ok 100 - OK inspection is not negative
+  ---
+  duration_ms: 0.097016
+  type: 'test'
+  ...
+# Subtest: Legacy print scripts restricted before interpolated content
+ok 101 - Legacy print scripts restricted before interpolated content
+  ---
+  duration_ms: 0.127572
+  type: 'test'
+  ...
+# Subtest: Technical inspection requires explicit result
+ok 102 - Technical inspection requires explicit result
+  ---
+  duration_ms: 0.162565
+  type: 'test'
+  ...
+# Subtest: Failed inspection cannot extend schedule
+ok 103 - Failed inspection cannot extend schedule
+  ---
+  duration_ms: 0.15243
+  type: 'test'
+  ...
+# Subtest: Failed inspection creates critical defect and blocks vehicle
+ok 104 - Failed inspection creates critical defect and blocks vehicle
+  ---
+  duration_ms: 0.133982
+  type: 'test'
+  ...
+# Subtest: Passing inspection alone never resolves outstanding critical defects
+ok 105 - Passing inspection alone never resolves outstanding critical defects
+  ---
+  duration_ms: 0.123236
+  type: 'test'
+  ...
+1..105
+# tests 105
+# suites 0
+# pass 105
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 137.229851
