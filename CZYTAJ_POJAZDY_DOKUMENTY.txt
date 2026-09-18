@@ -1,0 +1,91 @@
+ACC BAU — POJAZDY: DOKUMENTY, TERMINY, UDT
+Aktualizacja do działającej wersji po naprawie deploymentu. 17.09.2026
+
+JAK WGRAĆ — TYLKO PODMIANA PLIKÓW
+1. Rozpakuj ZIP.
+2. Skopiuj całą zawartość do GŁÓWNEGO katalogu obecnego programu.
+   Połącz foldery i zastąp pliki o takich samych nazwach. Dodaj nowe.
+   NIE usuwaj wcześniej całych folderów. To poprawka, nie cały program.
+   Na GitHubie: główny katalog -> Add file -> Upload files -> wgraj
+   foldery i pliki ze środka paczki -> Commit changes.
+3. Poczekaj na NOWE wdrożenie tej zmiany w Vercel i status Ready.
+   Otwórz aplikację i odśwież stronę.
+
+NIE zmieniaj ustawień Vercel, PIN-ów ani kont.
+NIE uruchamiaj SQL. NIE usuwaj tabel ani wpisów w Supabase.
+Paczka nie zawiera migracji, kluczy, danych przykładowych do importu
+ani operacji kasowania istniejących rekordów. Kod Narzędzi/BHP
+(app/page.tsx) i serwer logowania nie są zmienione.
+Zachowaj kopię dotychczasowych plików i zwykły backup bazy/pliku Storage.
+
+JAK UŻYWAĆ
+Po wejściu w Pojazdy zobaczysz domyślnie „Kontrola całej floty”.
+Na górze jest „Wymaga uwagi”, niżej tabela wszystkich aktywnych pojazdów.
+W tabeli: kierowca, odpowiedzialny za terminy, ubezpieczenie, przegląd,
+UDT oraz stan dowodu rejestracyjnego. Można filtrować po odpowiedzialnym,
+wyświetlić tylko wymagające uwagi i wyeksportować CSV.
+
+Kliknij numer rejestracyjny, żeby otworzyć pojazd.
+W jego karcie dowód i ubezpieczenie są obok siebie na szerokim ekranie,
+a poniżej osobno przegląd techniczny i UDT. Na telefonie karty układają
+się jedna pod drugą. Kliknij „Dodaj / uaktualnij”.
+Wgraj dokument lub zdjęcie (PDF, JPG, PNG, WEBP), wpisz termin i zapisz.
+Można też wybrać dokument już zapisany przy tym samym pojeździe.
+Przy dowodzie nie jest wymagana sztuczna data ważności.
+Pole „Odpowiedzialny za terminy” jest niezależne od aktualnego kierowcy
+oraz od uprawnień konta. Możesz wpisać Piotr Mania.
+
+UBEZPIECZENIE / PRZEGLĄD / UDT
+Ostrzeżenie pojawia się co najmniej 30 dni przed terminem. Termin dziś
+też wymaga uwagi; po jego przekroczeniu oznaczenie jest czerwone.
+Otworzenie, przeczytanie i odświeżenie nie usuwają ostrzeżenia.
+Ostrzeżenie o terminie znika dopiero po aktualizacji na odleglejszą datę;
+brak aktualnego dokumentu może nadal wymagać uzupełnienia.
+Terminy wcześniej ustawione na wcześniejsze ostrzeganie (>30 dni)
+zachowują wcześniejsze ostrzeżenie. Brak daty lub wymaganych dokumentów
+nie daje zielonego statusu. Awaria odczytu bazy również nie daje
+fałszywego komunikatu, że wszystko jest w porządku.
+
+Dla dźwigów / ładowarek teleskopowych i nazw rozpoznanych jako Manitou
+program wskazuje UDT do uzupełnienia. Dla innych maszyn prosi o
+potwierdzenie, czy UDT dotyczy tego urządzenia. To pomoc w ewidencji,
+nie ustalenie obowiązku prawnego. Datę wpisuj z dokumentów urządzenia:
+nie założono automatycznie corocznego badania.
+„Nie dotyczy” wymaga uzasadnienia; aktywnego harmonogramu nie da się
+w ten sposób po cichu schować. Gdy istnieją dwa harmonogramy tego
+samego typu, oba są zachowane i program sygnalizuje potrzebę sprawdzenia.
+
+STARE WPISY I DOKUMENTY
+Dotychczasowe daty są odczytywane z istniejących harmonogramów.
+Nie powstaje drugi, niezależny termin ubezpieczenia/przeglądu.
+Stare załączniki NIE są automatycznie odgadywane jako polisa albo dowód.
+Pierwsze przypisanie zrobisz wybierając dokument w odpowiedniej karcie.
+Zmiana daty nie przypisuje automatycznie starej polisy do nowego okresu.
+Po odnowieniu dodaj nową polisę albo świadomie potwierdź, że posiadany
+wybrany dokument obejmuje nową datę. Poprzednie pliki, terminy i autor
+zmiany pozostają w historii. Pliki nie są fizycznie usuwane.
+Zdjęcia dodane jako Dokument zachowują oryginalną jakość.
+Pracownik nadal ma poprzedni zakres dostępu: własne pojazdy, bez
+prywatnych dokumentów/kosztów; prowadzenie tych danych wymaga admina.
+
+SPRAWDZENIE PO WDROŻENIU
+Otwórz istniejący pojazd i sprawdź jego dawne daty, historię i pliki.
+Przypisz dowód i polisę w nowych kartach, ustaw odpowiedzialnego, zapisz.
+Po odświeżeniu sprawdź ten sam wpis i kolumny tabeli.
+Nie wpisuj próbnych, nieprawdziwych terminów do pojazdów używanych.
+To aktualizacja kodu; nie została wdrożona ani wykonana na Twojej bazie.
+
+WERYFIKACJA TECHNICZNA
+312 testów automatycznych zakończonych powodzeniem; bez pominiętych.
+Obejmują poprzednie testy oraz nowe: daty graniczne 30/0/-1, UDT,
+brak danych, zachowanie dokumentów i starych pól, role, wersjonowanie,
+operację transakcyjną, wybór dokumentów, ponowienie/dwuklik zapisu,
+render komponentów i połączenie głównego widoku z formularzami.
+Testy API i interfejsu używają atrap frameworka/bazy i lekkiego harnessu;
+nie są testem działającej aplikacji z prawdziwym Supabase.
+Sprawdzono składnię 32 plików TS/TSX, ścisłe typy 8 modułów logiki
+bez zewnętrznych zależności i 219 lokalnych odwołań import/eksport.
+Oceniono statyczny render komponentów na szerokości 1440 i 390 px.
+NIE potwierdzono pełnego npm run build ani działania na żywym Supabase.
+Środowisko nie pozwalało pobrać zależności npm. Wynik kompilacji
+oraz rzeczywisty upload i odczyt należy potwierdzić przy wdrożeniu.

@@ -61,7 +61,7 @@ export function CommandModal({spec,detail,lang,member,people,projects,onClose,on
         {/* Reveal a tab before the browser focuses its invalid field. */}
         <div data-form-section="basic" className={section==="basic"?"grid gap-4 sm:grid-cols-2 lg:grid-cols-3":"hidden"}>
           {input("plate",true)}{input("make",true)}{input("model",true)}{input("name")}{input("vin")}{input("year",false,"number")}
-          {select("category",["car","van","truck","trailer","machine","other"])}{input("country")}{select("status",["available","in_use","service","out_of_service","sold"])}
+          {select("category",["car","van","truck","trailer","crane","telehandler","machine","other"])}{input("country")}{select("status",["available","in_use","service","out_of_service","sold"])}
           {input("project",false,"text","fleet-form-projects")}{input("location")}
           {type==="create"&&<>{input("driver",false,"text","fleet-form-people")}{input("mileage",false,"number")}<Input label={tr(lang,"mileageDate")} type="date" max={localToday()} value={values.date} onChange={e=>put("date",e.target.value)}/></>}
         </div>
@@ -93,7 +93,7 @@ export function CommandModal({spec,detail,lang,member,people,projects,onClose,on
       {(type==="plan_add"||type==="plan_update")&&<>
         <div className="rounded-xl bg-orange-50 p-3 text-sm font-bold text-orange-900">{tr(lang,"firstDue")}</div>
         <p className="text-xs leading-relaxed text-zinc-500">{tr(lang,"intervalHint")}</p>
-        <div className="grid gap-4 sm:grid-cols-2"><Pick label={tr(lang,"kind")} value={values.kind} onChange={e=>{put("kind",e.target.value);put("label",tr(lang,e.target.value));}} options={opt(lang,["inspection","insurance","oil","oil_filter","air_filter","cabin_filter","fuel_filter","timing_belt","brake_fluid","tyres","tachograph","extinguisher","other"])}/>{input("label",true)}{input("dueDate",false,"date")}{input("dueMileage",false,"number")}{input("intervalMonths",false,"number")}{input("intervalKm",false,"number")}{input("warnDays",false,"number")}{input("warnKm",false,"number")}</div>
+        <div className="grid gap-4 sm:grid-cols-2"><Pick label={tr(lang,"kind")} value={values.kind} onChange={e=>{put("kind",e.target.value);put("label",tr(lang,e.target.value));}} options={opt(lang,["inspection","insurance","udt","oil","oil_filter","air_filter","cabin_filter","fuel_filter","timing_belt","brake_fluid","tyres","tachograph","extinguisher","other"])}/>{input("label",true)}{input("dueDate",false,"date")}{input("dueMileage",false,"number")}{input("intervalMonths",false,"number")}{input("intervalKm",false,"number")}{input("warnDays",false,"number")}{input("warnKm",false,"number")}</div>
         {type==="plan_update"&&<Textarea label={tr(lang,"reason")} required maxLength={2000} value={values.reason} onChange={e=>put("reason",e.target.value)}/>}
         <Textarea label={tr(lang,"notes")} value={values.notes} maxLength={2000} onChange={e=>put("notes",e.target.value)}/>
       </>}

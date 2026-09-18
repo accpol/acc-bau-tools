@@ -54,7 +54,7 @@ export function Dialog({ title, children, onClose, busy = false, wide = false }:
 }
 export function FormFooter({ lang, busy, onClose }: { lang: string; busy: boolean; onClose: () => void }) { return <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-white p-4 sm:px-6"><Btn onClick={onClose} disabled={busy}>{tr(lang,"cancel")}</Btn><Btn type="submit" tone="primary" disabled={busy}>{busy && <LoaderCircle className="h-4 w-4 animate-spin" />}{tr(lang,busy ? "saving" : "save")}</Btn></div>; }
 
-export function PrivateImage({ id, alt, className = "" }: { id?: string; alt: string; className?: string }) {
+export function PrivateImage({ id, alt, className = "", fit = "cover" }: { id?: string; alt: string; className?: string; fit?: "cover" | "contain" }) {
   const [url,setUrl] = useState(""); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!id) return; let alive = true; let timer: ReturnType<typeof setInterval> | undefined;
@@ -63,7 +63,7 @@ export function PrivateImage({ id, alt, className = "" }: { id?: string; alt: st
     if (ref.current) observer.observe(ref.current);
     return () => { alive = false; observer.disconnect(); if (timer) clearInterval(timer); };
   }, [id]);
-  return <div ref={ref} className={`flex items-center justify-center overflow-hidden bg-zinc-100 ${className}`}>{url ? <img loading="lazy" decoding="async" src={url} alt={alt} className="h-full w-full object-cover" /> : <ImageIcon className="h-8 w-8 text-zinc-300" />}</div>;
+  return <div ref={ref} className={`flex items-center justify-center overflow-hidden bg-zinc-100 ${className}`}>{url ? <img loading="lazy" decoding="async" src={url} alt={alt} className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`} /> : <ImageIcon className="h-8 w-8 text-zinc-300" />}</div>;
 }
 export function FileViewer({ file, lang, onClose }: { file: FleetFile; lang: string; onClose: () => void }) {
   const [url,setUrl] = useState(""); const [error,setError] = useState("");
@@ -79,10 +79,11 @@ export function FileTiles({ files, lang, onView }: { files: FleetFile[]; lang: s
   return <div className="flex flex-wrap gap-2">{files.map(f => <button key={f.id} onClick={() => onView(f)} className="flex max-w-full items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-left text-xs hover:border-orange-400">{f.mime.startsWith("image/") ? <ImageIcon className="h-4 w-4 shrink-0 text-orange-600" /> : <FileText className="h-4 w-4 shrink-0 text-orange-600" />}<span className="max-w-52 truncate">{f.name}</span><span className="text-zinc-400">{tr(lang,f.category)}</span></button>)}</div>;
 }
 interface Staged { id: string; file: File; prepared?: File; category: FileCategory; state: "busy" | "ready" | "error"; error?: string }
-export function Uploader({ vehicleId, lang, admin, fileIds, onIds, existing, onBusy, defaultCategory = "photo" }: { vehicleId:string;lang:string;admin:boolean;fileIds:string[];onIds:(ids:string[])=>void;existing:FleetFile[];onBusy:(b:boolean)=>void;defaultCategory?:FileCategory }) {
-  const [category,setCategory] = useState<FileCategory>(admin ? defaultCategory : "photo"); const [items,setItems] = useState<Staged[]>([]);
+export function Uploader({ vehicleId, lang, admin, fileIds, onIds, existing, onBusy, defaultCategory = "photo", lockedCategory, onIncomplete }: { vehicleId:string;lang:string;admin:boolean;fileIds:string[];onIds:(ids:string[])=>void;existing:FleetFile[];onBusy:(b:boolean)=>void;defaultCategory?:FileCategory;lockedCategory?:FileCategory;onIncomplete?:(b:boolean)=>void }) {
+  const [category,setCategory] = useState<FileCategory>(admin ? (lockedCategory || defaultCategory) : "photo"); const [items,setItems] = useState<Staged[]>([]);
   const [error,setError] = useState(""); const [busy,setBusy] = useState(false); const idsRef=useRef(fileIds); idsRef.current=fileIds;
   const regular=useRef<HTMLInputElement>(null), camera=useRef<HTMLInputElement>(null);
+  useEffect(() => { onIncomplete?.(items.some(item => item.state !== "ready")); }, [items, onIncomplete]);
   const process = async (entry:Staged) => {
     setItems(prev => prev.map(e => e.id===entry.id ? {...e,state:"busy",error:""} : e));
     try {
@@ -102,11 +103,11 @@ export function Uploader({ vehicleId, lang, admin, fileIds, onIds, existing, onB
   };
   const retry=async (entry:Staged) => {setBusy(true);onBusy(true);try{await process(entry);}finally{setBusy(false);onBusy(false);}};
   return <div className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4"><h3 className="text-sm font-black">{tr(lang,"attachments")}</h3><p className="text-xs leading-relaxed text-zinc-500">{tr(lang,"fileHint")}</p>
-    <div className="flex flex-wrap items-end gap-2">{admin && <div className="min-w-36"><Pick label={tr(lang,"kind")} value={category} onChange={e=>setCategory(e.target.value as FileCategory)} disabled={busy} options={["photo","invoice","document"].map(value=>({value,label:tr(lang,value)}))}/></div>}<Btn onClick={()=>regular.current?.click()} disabled={busy}><Upload className="h-4 w-4" />{tr(lang,"upload")}</Btn><Btn onClick={()=>camera.current?.click()} disabled={busy}><Camera className="h-4 w-4" />{tr(lang,"camera")}</Btn></div>
+    <div className="flex flex-wrap items-end gap-2">{admin && !lockedCategory && <div className="min-w-36"><Pick label={tr(lang,"kind")} value={category} onChange={e=>setCategory(e.target.value as FileCategory)} disabled={busy} options={["photo","invoice","document"].map(value=>({value,label:tr(lang,value)}))}/></div>}<Btn onClick={()=>regular.current?.click()} disabled={busy}><Upload className="h-4 w-4" />{tr(lang,"upload")}</Btn><Btn onClick={()=>camera.current?.click()} disabled={busy}><Camera className="h-4 w-4" />{tr(lang,"camera")}</Btn></div>
     <input ref={regular} type="file" hidden multiple accept={category==="photo"?"image/jpeg,image/png,image/webp":"image/jpeg,image/png,image/webp,application/pdf"} onChange={e=>{void add(e.target.files);e.target.value="";}} />
     <input ref={camera} type="file" hidden capture="environment" accept="image/*" onChange={e=>{void add(e.target.files);e.target.value="";}} />
     <ErrorBanner lang={lang} error={error}/>
-    {items.map(entry=><div key={entry.id} className="rounded-xl border bg-white p-3 text-xs"><div className="flex items-center gap-2">{entry.state==="busy"?<LoaderCircle className="h-4 w-4 animate-spin"/>:entry.state==="ready"?<CheckCircle2 className="h-4 w-4 text-emerald-600"/>:<AlertTriangle className="h-4 w-4 text-red-600"/>}<span className="min-w-0 flex-1 truncate">{entry.file.name}</span><span>{tr(lang,entry.state==="busy"?"uploading":entry.state==="ready"?"uploaded":"retry")}</span>{entry.state==="error"&&<Btn disabled={busy} onClick={()=>retry(entry)}>{tr(lang,"retry")}</Btn>}</div>{entry.error&&<p className="mt-2 text-red-700">{errorText(lang,entry.error)}</p>}</div>)}
+    {items.map(entry=><div key={entry.id} className="rounded-xl border bg-white p-3 text-xs"><div className="flex items-center gap-2">{entry.state==="busy"?<LoaderCircle className="h-4 w-4 animate-spin"/>:entry.state==="ready"?<CheckCircle2 className="h-4 w-4 text-emerald-600"/>:<AlertTriangle className="h-4 w-4 text-red-600"/>}<span className="min-w-0 flex-1 truncate">{entry.file.name}</span><span>{tr(lang,entry.state==="busy"?"uploading":entry.state==="ready"?"uploaded":"retry")}</span>{entry.state==="error"&&<><Btn disabled={busy} onClick={()=>retry(entry)}>{tr(lang,"retry")}</Btn>{onIncomplete&&<Btn disabled={busy} onClick={()=>setItems(prev=>prev.filter(item=>item.id!==entry.id))}>{tr(lang,"skipFailedUpload")}</Btn>}</>}</div>{entry.error&&<p className="mt-2 text-red-700">{errorText(lang,entry.error)}</p>}</div>)}
     {existing.some(f=>!f.event_id&&(admin||f.category==="photo"))&&<details><summary className="cursor-pointer text-xs font-bold">{tr(lang,"existingFiles")}</summary><div className="mt-2 space-y-2">{existing.filter(f=>!f.event_id&&(admin||f.category==="photo")).map(f=><Check key={f.id} label={f.name} checked={fileIds.includes(f.id)} disabled={busy} onChange={e=>onIds(e.target.checked?[...fileIds,f.id]:fileIds.filter(id=>id!==f.id))}/>)}</div></details>}
   </div>;
 }

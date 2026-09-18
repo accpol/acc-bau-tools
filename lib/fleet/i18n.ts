@@ -142,6 +142,17 @@ const messages: Record<string, readonly [string, string, string]> = {
   error_INVALID_FILES: ["Załącznik jest niegotowy, już powiązany albo należy do innego wpisu. Sprawdź pliki.", "An attachment is unfinished, already linked or belongs elsewhere. Check the files.", "Anhang ist nicht fertig, bereits zugeordnet oder gehört zu einem anderen Eintrag. Dateien prüfen."],
   error_LAST_ADMIN: ["Musi pozostać co najmniej jeden aktywny administrator.", "At least one active administrator must remain.", "Mindestens ein aktiver Administrator muss bleiben."],
   error_SELF_DEACTIVATION: ["Nie możesz wyłączyć własnego konta administratora.", "You cannot disable your own admin account.", "Eigenes Administratorkonto kann nicht deaktiviert werden."],
+  udt: ["Badanie / decyzja UDT", "UDT inspection / decision", "UDT-Prüfung / Bescheid"],
+  crane: ["Dźwig / żuraw", "Crane", "Kran"],
+  telehandler: ["Ładowarka teleskopowa / Manitou", "Telehandler / Manitou", "Teleskoplader / Manitou"],
+  skipFailedUpload: ["Pomiń nieudany plik", "Skip failed file", "Fehlgeschlagene Datei überspringen"],
+  compliance: ["Dokumenty i kontrola terminów", "Documents and compliance dates", "Dokumente und Fristenkontrolle"],
+  error_INVALID_COMPLIANCE: ["Sprawdź rodzaj dokumentu i czy dotyczy tego pojazdu.", "Check the document type and applicability.", "Dokumentart und Anwendbarkeit prüfen."],
+  error_COMPLIANCE_ACTIVE_PLAN: ["Ten pojazd ma aktywny harmonogram tego rodzaju. Najpierw zarchiwizuj go z uzasadnieniem w „Terminy i serwisy”; nie został ukryty automatycznie.", "An active schedule exists. Archive it with a reason in Service plans first; it was not hidden automatically.", "Ein aktiver Plan besteht. Diesen zuerst unter Wartungspläne begründet archivieren; er wurde nicht automatisch ausgeblendet."],
+  error_COMPLIANCE_DATE_REQUIRED: ["Wpisz datę ważności / następnego badania.", "Enter the expiry / next inspection date.", "Gültigkeits- / nächsten Prüftermin eingeben."],
+  error_COMPLIANCE_SELECT_PLAN: ["Wybierz istniejący harmonogram. Odśwież dane, jeżeli ktoś zapisał go w międzyczasie.", "Select the existing schedule. Reload if another user has added one.", "Bestehenden Plan wählen. Bei zwischenzeitlicher Änderung Daten aktualisieren."],
+  error_COMPLIANCE_CONFIRM_DOCUMENT: ["Sprawdź, czy stary załącznik potwierdza nowy termin, i zaznacz potwierdzenie albo wgraj nowy dokument.", "Confirm that the existing attachment supports the new date, or upload a new document.", "Bestätigen, dass der alte Anhang den neuen Termin belegt, oder neues Dokument hochladen."],
+
 };
 export function tr(lang: string, key: string): string { const index = lang === "de" ? 2 : lang === "en" ? 1 : 0; return messages[key]?.[index] ?? messages[key]?.[0] ?? key; }
 export function errorText(lang: string, code: string): string { return tr(lang, messages[`error_${code}`] ? `error_${code}` : "error_GENERIC"); }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
+import { prepareComplianceCommand, validateComplianceFiles } from "@/lib/fleet/compliance-command";
 import { assert, FleetError, integerOrNull, prepareCommand, text, uuid } from "@/lib/fleet/domain";
 import { adminOnly, body, BUCKET, canView, checkDb, clearSession, commandHash, db, EVENT_COLUMNS, FILE_COLUMNS, getDetail, getVehicle, hashPin, login, publicVehicle, rows, safeMember, session } from "@/lib/fleet/server";
 import type { FleetCommand, FleetEvent, FleetFile, FleetMember, Vehicle } from "@/lib/fleet/types";
@@ -65,7 +66,18 @@ export async function POST(req: NextRequest, context: Context) {
         const { data: files, error } = await client.from("acc_fleet_files").select("id,vehicle_id,state,event_id,category,created_by").in("id", cmd.fileIds); checkDb(error);
         assert(files?.length === cmd.fileIds.length && files.every(f => f.vehicle_id === cmd.vehicleId && f.state === "ready" && !f.event_id && (member.role === "admin" || (f.category === "photo" && f.created_by === member.name))), "INVALID_FILES");
       }
-      const prepared = prepareCommand(cmd, current, events, member);
+      const prepared = cmd.type === "compliance_save"
+        ? prepareComplianceCommand(cmd, current, member)
+        : prepareCommand(cmd, current, events, member);
+      if (cmd.type === "compliance_save") {
+        const ids = prepared.event.data.documentIds || [];
+        let documents: Pick<FleetFile, "id" | "vehicle_id" | "state" | "category">[] = [];
+        if (ids.length) {
+          const result = await client.from("acc_fleet_files").select("id,vehicle_id,state,category").in("id", ids);
+          checkDb(result.error); documents = result.data || [];
+        }
+        validateComplianceFiles(cmd, documents);
+      }
       if (cmd.type === "cover") {
         const { data: cover, error } = await client.from("acc_fleet_files").select("vehicle_id,category,state").eq("id", prepared.data.coverFileId).maybeSingle(); checkDb(error);
         assert(cover && cover.vehicle_id === cmd.vehicleId && cover.category === "photo" && cover.state === "ready", "INVALID_FILES");

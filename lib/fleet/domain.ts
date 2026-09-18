@@ -52,7 +52,7 @@ export function planAlert(plan: ServicePlan, mileage: number | null, today = loc
   const km = plan.dueMileage != null && mileage != null ? plan.dueMileage - mileage : null;
   let severity: PlanAlert["severity"] = "ok";
   if ((days != null && days < 0) || (km != null && km <= 0)) severity = "overdue";
-  else if ((days != null && days <= plan.warnDays) || (km != null && km <= plan.warnKm)) severity = "soon";
+  else if ((days != null && days <= (["insurance", "inspection", "udt"].includes(plan.kind) ? Math.max(30, plan.warnDays) : plan.warnDays)) || (km != null && km <= plan.warnKm)) severity = "soon";
   else if ((!plan.dueDate && plan.dueMileage == null) || (plan.dueMileage != null && mileage == null)) severity = "missing";
   return { plan, days, km, severity };
 }
@@ -81,7 +81,7 @@ export function sanitizeVehicleInfo(patch: Record<string, unknown>, current: Veh
   if (next.purchasePrice) numberOrNull(next.purchasePrice, 100_000_000);
   return next;
 }
-const PLAN_KINDS: PlanKind[] = ["inspection", "insurance", "oil", "oil_filter", "air_filter", "cabin_filter", "fuel_filter", "timing_belt", "brake_fluid", "tyres", "tachograph", "extinguisher", "other"];
+const PLAN_KINDS: PlanKind[] = ["inspection", "insurance", "udt", "oil", "oil_filter", "air_filter", "cabin_filter", "fuel_filter", "timing_belt", "brake_fluid", "tyres", "tachograph", "extinguisher", "other"];
 export function sanitizePlan(p: Record<string, unknown>): ServicePlan {
   assert(PLAN_KINDS.includes(p.kind as PlanKind), "INVALID_PLAN");
   const plan: ServicePlan = { id: uuid(p.id), kind: p.kind as PlanKind, label: text(p.label, 160, true), dueDate: dateOrNull(p.dueDate), dueMileage: integerOrNull(p.dueMileage), intervalMonths: integerOrNull(p.intervalMonths, 240), intervalKm: integerOrNull(p.intervalKm, 1_000_000), warnDays: integerOrNull(p.warnDays, 365) ?? 30, warnKm: integerOrNull(p.warnKm, 100_000) ?? 1500, lastDoneDate: null, lastDoneMileage: null, notes: text(p.notes, 2000), archived: false };

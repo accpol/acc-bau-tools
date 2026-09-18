@@ -16,8 +16,8 @@ function walk(dir) {
   }
 }
 walk(root);
-const files=['lib/fleet/types.ts','lib/fleet/domain.ts','lib/fleet/i18n.ts','lib/fleet/print.ts','lib/legacy-safety.ts'].map(p=>path.join(root,p));
+const files=['lib/fleet/types.ts','lib/fleet/domain.ts','lib/fleet/i18n.ts','lib/fleet/print.ts','lib/legacy-safety.ts','lib/fleet/compliance.ts','lib/fleet/compliance-command.ts','lib/fleet/compliance-i18n.ts'].map(p=>path.join(root,p));
 const program=ts.createProgram(files,{noEmit:true,strict:true,target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,moduleResolution:ts.ModuleResolutionKind.Node10,lib:['lib.es2022.d.ts','lib.dom.d.ts'],types:[]});
 problems.push(...ts.getPreEmitDiagnostics(program).map(d=>`${d.file?.fileName||''}: ${ts.flattenDiagnosticMessageText(d.messageText,'\n')}`));
 if(problems.length){console.error(problems.join('\n'));process.exitCode=1;}
-else console.log(`OK: składnia ${count} plików TS/TSX; strict TypeScript: 5 modułów logiki bez zewnętrznych zależności.`);
+else console.log(`OK: składnia ${count} plików TS/TSX; strict TypeScript: ${files.length} modułów logiki bez zewnętrznych zależności.`);
