@@ -1453,6 +1453,10 @@ export default function App() {
     setLang(storedLang);
     if (publicTool) setPublicToolId(publicTool);
     if (publicPpe) setPublicPpeId(publicPpe);
+    // Bezpośrednie wejście z systemu firmowego: /?module=ppe (BHP), /?module=vehicles (Pojazdy), /?module=tools.
+    // Tylko wybiera zakładkę startową. Logowanie, uprawnienia i dane działają bez zmian.
+    const startModule = params.get("module");
+    if (startModule === "ppe" || startModule === "vehicles" || startModule === "tools") setActiveModule(startModule);
     if (transfer) {
       setTransferCode(transfer);
       setShowClaim(true);
