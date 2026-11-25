@@ -12,13 +12,20 @@ import { printVehicle } from "@/lib/fleet/print";
 import type { ComplianceKind, FleetFile, FleetMember, PlanAlert, Vehicle, VehicleDetail } from "@/lib/fleet/types";
 import { CommandModal, MembersModal, type ModalSpec } from "./forms";
 import { Badge, Btn, DateText, ErrorBanner, errorCode, FileTiles, FileViewer, Info, Input, num, Panel, Pick, PrivateImage } from "./common";
+import NewFleetView, { viewText } from "./NewView";
 
-interface Props { lang:string;user:string;people:string[];projects:string[] }
+type Look="new"|"classic";
+interface Props { lang:string;user:string;people:string[];projects:string[];look?:Look }
+// Wybór widoku (nowy / stary) pamięta przeglądarka. Oba widoki pokazują te same dane.
+const LOOK_KEY="acc-fleet-look";
+function storedLook():Look{try{return window.localStorage.getItem(LOOK_KEY)==="classic"?"classic":"new";}catch{return "new";}}
 const stale=(v:Vehicle)=>v.data.mileage==null||!v.data.mileageDate||dayDifference(v.data.mileageDate)<-30;
 const needsAttention=(v:Vehicle,today=localToday())=>!v.data.archived&&(v.data.openDefects>0||stale(v)||!v.data.plans.some(p=>!p.archived)||vehicleAlerts(v,today).some(a=>a.severity!=="ok")||vehicleCompliance(v,today).issues.length>0);
 const alertTone=(s:PlanAlert["severity"]):"red"|"amber"|"green"=>s==="overdue"?"red":s==="ok"?"green":"amber";
 
-export default function FleetPage({lang,user,people,projects}:Props) {
+export default function FleetPage({lang,user,people,projects,look:initialLook}:Props) {
+  const [look,setLook]=useState<Look>(()=>initialLook||storedLook());
+  function switchLook(next:Look){setLook(next);try{window.localStorage.setItem(LOOK_KEY,next);}catch{/* bez pamięci przeglądarki wybór działa do zamknięcia strony */}}
   const [member,setMember]=useState<FleetMember|null>(null),[authLoading,setAuthLoading]=useState(true),[authError,setAuthError]=useState("");
   const [name,setName]=useState(user),[pin,setPin]=useState("");
   const [vehicles,setVehicles]=useState<Vehicle[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState("");
@@ -52,6 +59,7 @@ export default function FleetPage({lang,user,people,projects}:Props) {
   async function signIn(e:React.FormEvent){e.preventDefault();setAuthLoading(true);setAuthError("");try{const r=await api<{member:FleetMember}>("login",{name,pin});setMember(r.member);setPin("");}catch(e){setAuthError(errorCode(e));}finally{setAuthLoading(false);}}
   async function signOut(){try{await api("logout",{});vehiclesRequest.current++;selectedRef.current="";setLoading(false);setMember(null);setVehicles([]);setSelected("");setDetail(null);setModal(null);setComplianceKind(null);setLoadedAt("");}catch(e){setError(errorCode(e));}}
   function saved(d:VehicleDetail){vehiclesRequest.current++;setLoading(false);setDetail(d);selectedRef.current=d.vehicle.id;setSelected(d.vehicle.id);setVehicles(prev=>[d.vehicle,...prev.filter(v=>v.id!==d.vehicle.id)]);setModal(null);setToast(tr(lang,"saved"));if(d.vehicle.data.archived)setFilter("archived");else if(filter==="archived")setFilter("active");}
+  function closeVehicle(){selectedRef.current="";setSelected("");setDetail(null);setDetailLoading(false);setModal(null);setComplianceKind(null);}
   async function refresh(){await loadVehicles();if(selectedRef.current)await loadDetail(selectedRef.current);}
   async function quick(type:string,payload:Record<string,unknown>){if(!detail||actionBusy)return;setActionBusy(true);setError("");try{const d=await api<VehicleDetail>("commands",{commandId:crypto.randomUUID(),vehicleId:detail.vehicle.id,expectedVersion:detail.vehicle.version,type,payload,fileIds:[]});saved(d);}catch(e){setError(errorCode(e));}finally{setActionBusy(false);}}
   const filtered=useMemo(()=>vehicles.filter(v=>{
@@ -67,8 +75,23 @@ export default function FleetPage({lang,user,people,projects}:Props) {
     {["SETUP_REQUIRED","MIGRATION_REQUIRED","SECRET_TOO_SHORT"].includes(authError)?<><p className="my-4 leading-relaxed text-zinc-600">{tr(lang,"setupText")}</p><ErrorBanner lang={lang} error={authError}/><Btn onClick={checkAuth}>{tr(lang,"retry")}</Btn></>:<form onSubmit={signIn} className="mt-4 space-y-4"><p className="text-sm leading-relaxed text-zinc-600">{tr(lang,"loginHint")}</p><ErrorBanner lang={lang} error={authError}/><datalist id="fleet-login-names">{Array.from(new Set(people)).map(p=><option key={p} value={p}/>)}</datalist><Input label={tr(lang,"loginName")} required value={name} list="fleet-login-names" onChange={e=>setName(e.target.value)} autoComplete="username"/><Input label={tr(lang,"pin")} required type="password" value={pin} onChange={e=>setPin(e.target.value)} autoComplete="current-password"/><Btn type="submit" tone="primary" disabled={authLoading}>{tr(lang,authLoading?"loading":"enter")}</Btn></form>}
     <p className="mt-5 border-t pt-4 text-xs text-zinc-500">{tr(lang,"retained")}</p></Panel>;
 
+  const overlays=<>
+    {modal&&<CommandModal key={`${modal.type}-${modal.event?.id||modal.plan?.id||""}`} spec={modal} detail={modal.type==="create"?null:shownDetail} lang={lang} member={member} people={Array.from(new Set([...people,...vehicles.map(v=>v.data.driver).filter(Boolean),member.name]))} projects={projects} onClose={()=>setModal(null)} onSaved={saved} onRefresh={async()=>{if(selected)await loadDetail(selected,true);}}/>}
+    {complianceKind&&shownDetail&&admin&&<ComplianceModal key={`${shownDetail.vehicle.id}-${complianceKind}`} kind={complianceKind} detail={shownDetail} lang={lang} people={Array.from(new Set([...people,...vehicles.map(v=>v.data.driver).filter(Boolean),member.name]))} onClose={()=>setComplianceKind(null)} onSaved={d=>{setComplianceKind(null);saved(d);}} onRefresh={async()=>{if(selected)await loadDetail(selected,true);}}/>}
+    {showMembers&&<MembersModal lang={lang} people={people} current={member} onClose={()=>setShowMembers(false)} onSessionExpired={()=>{setShowMembers(false);setMember(null);}}/>}
+    {file&&<FileViewer file={file} lang={lang} onClose={()=>setFile(null)}/>}
+  </>;
+  if(look==="new") return <>
+    <NewFleetView lang={lang} member={member} admin={!!admin} vehicles={vehicles} today={today} loading={loading} loadedAt={loadedAt} listError={listError} error={error} toast={toast}
+      selected={selected} detail={shownDetail} detailLoading={detailLoading} actionBusy={actionBusy}
+      onRefresh={refresh} onSignOut={()=>{void signOut();}} onMembers={()=>setShowMembers(true)} onClassic={()=>switchLook("classic")}
+      onOpen={id=>{setComplianceKind(null);void loadDetail(id);}} onBack={closeVehicle} onModal={setModal} onCompliance={setComplianceKind}
+      onOpenCompliance={(id,kind)=>{void openCompliance(id,kind);}} onFile={setFile} onQuick={(type,payload)=>{void quick(type,payload);}} onError={setError}/>
+    {overlays}
+  </>;
+
   return <div className="space-y-5">
-    <Panel><div className="flex flex-col justify-between gap-4 xl:flex-row"><div><div className="mb-2 text-xs font-black tracking-widest text-orange-600">ACC BAU • FLEET</div><h2 className="text-3xl font-black tracking-tight">{tr(lang,"title")}</h2><p className="mt-1 text-sm text-zinc-500">{tr(lang,"subtitle")}</p></div><div className="flex flex-wrap items-start gap-2"><Btn onClick={refresh} disabled={loading||detailLoading}><RefreshCw className={`h-4 w-4 ${loading?"animate-spin":""}`}/>{tr(lang,"refresh")}</Btn>{admin&&<><Btn onClick={()=>setShowMembers(true)}><Users className="h-4 w-4"/>{tr(lang,"members")}</Btn><Btn tone="primary" onClick={()=>setModal({type:"create"})}><Plus className="h-4 w-4"/>{tr(lang,"addVehicle")}</Btn></>}<Btn onClick={signOut} title={tr(lang,"logout")} aria-label={tr(lang,"logout")}><LogOut className="h-4 w-4"/></Btn></div></div><div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3 text-xs text-zinc-500"><ShieldCheck className="h-4 w-4 text-emerald-600"/><b>{member.name} • {tr(lang,member.role)}</b><span>— {tr(lang,"retained")}</span></div></Panel>
+    <Panel><div className="flex flex-col justify-between gap-4 xl:flex-row"><div><div className="mb-2 text-xs font-black tracking-widest text-orange-600">ACC BAU • FLEET</div><h2 className="text-3xl font-black tracking-tight">{tr(lang,"title")}</h2><p className="mt-1 text-sm text-zinc-500">{tr(lang,"subtitle")}</p></div><div className="flex flex-wrap items-start gap-2"><Btn onClick={refresh} disabled={loading||detailLoading}><RefreshCw className={`h-4 w-4 ${loading?"animate-spin":""}`}/>{tr(lang,"refresh")}</Btn>{admin&&<><Btn onClick={()=>setShowMembers(true)}><Users className="h-4 w-4"/>{tr(lang,"members")}</Btn><Btn tone="primary" onClick={()=>setModal({type:"create"})}><Plus className="h-4 w-4"/>{tr(lang,"addVehicle")}</Btn></>}<Btn onClick={()=>switchLook("new")}>{viewText(lang,"newLook")}</Btn><Btn onClick={signOut} title={tr(lang,"logout")} aria-label={tr(lang,"logout")}><LogOut className="h-4 w-4"/></Btn></div></div><div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3 text-xs text-zinc-500"><ShieldCheck className="h-4 w-4 text-emerald-600"/><b>{member.name} • {tr(lang,member.role)}</b><span>— {tr(lang,"retained")}</span></div></Panel>
     <ErrorBanner lang={lang} error={error}/>{toast&&<div role="status" className="flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800"><CheckCircle2 className="h-5 w-5"/>{toast}</div>}
     <ComplianceAttention vehicles={vehicles} today={today} lang={lang} loadedAt={loadedAt} error={listError} onOpen={(id,kind)=>{void openCompliance(id,kind);}}/>
     {view!=="control"&&<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[
@@ -106,9 +129,6 @@ export default function FleetPage({lang,user,people,projects}:Props) {
         {tab==="documents"&&<Panel><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h4 className="text-lg font-black">{tr(lang,"documents")}</h4>{!shownDetail.vehicle.data.archived&&<Btn tone="primary" onClick={()=>setModal({type:"document"})}><Plus className="h-4 w-4"/>{tr(lang,"newDocuments")}</Btn>}</div><p className="mb-4 text-xs text-zinc-500">{tr(lang,"fileHint")}</p>{!shownDetail.files.length&&<p className="p-8 text-center text-sm text-zinc-500">{tr(lang,"noFiles")}</p>}<div className="grid gap-3 sm:grid-cols-2">{shownDetail.files.map(f=><div key={f.id} className="overflow-hidden rounded-2xl border border-zinc-200">{f.mime.startsWith("image/")&&<button onClick={()=>setFile(f)} className="w-full"><PrivateImage id={f.id} alt={f.name} className="h-40 w-full"/></button>}<div className="space-y-2 p-3"><Badge>{tr(lang,f.category)}</Badge><p className="break-words text-sm font-bold">{f.name}</p><p className="text-xs text-zinc-500">{(f.size/1024/1024).toFixed(2)} MB • <DateText date={f.created_at} lang={lang}/></p>{!f.event_id&&<p className="text-xs text-amber-700">{tr(lang,"unlinked")}</p>}<div className="flex flex-wrap gap-2"><Btn onClick={()=>setFile(f)}>{tr(lang,"preview")}</Btn>{admin&&f.category==="photo"&&!shownDetail.vehicle.data.archived&&shownDetail.vehicle.data.coverFileId!==f.id&&<Btn disabled={actionBusy} onClick={()=>quick("cover",{id:f.id})}>{tr(lang,"cover")}</Btn>}</div></div></div>)}</div></Panel>}
       </>}</div>
     </div>}
-    {modal&&<CommandModal key={`${modal.type}-${modal.event?.id||modal.plan?.id||""}`} spec={modal} detail={modal.type==="create"?null:shownDetail} lang={lang} member={member} people={Array.from(new Set([...people,...vehicles.map(v=>v.data.driver).filter(Boolean),member.name]))} projects={projects} onClose={()=>setModal(null)} onSaved={saved} onRefresh={async()=>{if(selected)await loadDetail(selected,true);}}/>}
-    {complianceKind&&shownDetail&&admin&&<ComplianceModal key={`${shownDetail.vehicle.id}-${complianceKind}`} kind={complianceKind} detail={shownDetail} lang={lang} people={Array.from(new Set([...people,...vehicles.map(v=>v.data.driver).filter(Boolean),member.name]))} onClose={()=>setComplianceKind(null)} onSaved={d=>{setComplianceKind(null);saved(d);}} onRefresh={async()=>{if(selected)await loadDetail(selected,true);}}/>}
-    {showMembers&&<MembersModal lang={lang} people={people} current={member} onClose={()=>setShowMembers(false)} onSessionExpired={()=>{setShowMembers(false);setMember(null);}}/>}
-    {file&&<FileViewer file={file} lang={lang} onClose={()=>setFile(null)}/>}
+    {overlays}
   </div>;
 }
